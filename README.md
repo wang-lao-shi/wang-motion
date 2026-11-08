@@ -19,7 +19,7 @@
 
 ## 宣传片演示
 
-[![WANG MOTION 官方宣传片演示 (点击立即播放)](docs/assets/video-player-poster.png)](https://github.com/w18774994563/wang-motion/releases/download/v0.1.0/wang-motion-promo-720p.mp4)
+https://github.com/user-attachments/assets/44e17cb5-28a1-414c-9407-cf7e9142c573
 
 ## 当前内容
 
