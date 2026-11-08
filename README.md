@@ -8,15 +8,21 @@
 
 卡片动效模板渲染器：给一组图片或视频，选一个模板，输出 MP4、WebM、GIF 或静帧 PNG。适合做作品集展示、产品图轮播、相册动效、社媒短视频片头。
 
-- 100 个模板：70 个复刻 + 30 个原创，分 16 个分类
+- 100 个原创模板（ref: "original"），分 16 个分类
 - 全部自有代码（Three.js + Playwright 无头 Chromium），不依赖在线服务
 - 每个模板都是**无缝循环**：首尾帧一致，可直接做循环播放
 - 横竖方屏通吃：16:9、9:16、1:1、4:5 等画幅都能自动适配
 
+## 宣传片演示
+
+https://github.com/w18774994563/wang-motion/releases/download/v0.1.0/wang-motion-promo-720p.mp4
+
+> 💡 *如果浏览器无法内嵌播放上方视频，可直接点击 [宣传片直链下载/播放](https://github.com/w18774994563/wang-motion/releases/download/v0.1.0/wang-motion-promo-720p.mp4)。*
+
 ## 当前内容
 
-- 模板总数 100（`wm list` 统计，不含 `_` 开头的测试模板）：70 个复刻（`ref: "animos"`）+ 30 个原创（`ref: "original"`）
-- 分类 16 个，详见下方「分类与数量」
+- 模板总数 100（`wm list` 统计，不含 `_` 开头的测试模板）：100 个原创（`ref: "original"`）
+- 分类 16 个，详见下方「分类一览」
 - 引擎能力：卡片特效、镜像倒影、渐隐遮罩、字形文字卡片、样条镜头路径与雾效、粒子系统（dot / bokeh / spark / quad / streak / petal）、模板后期（chroma / glitch / scan / flash / tint / grade / bloom / leak / barrel / tracking / noise）、设备样机（phone / tablet / laptop / watch / browser / crt）、翻页卷曲、卡片厚度
 - 内置字体：Inter、Noto Sans SC（GB2312 字符集）
 - 下划线开头的是测试模板，`wm list` 不显示，但可以用 id 直接渲染（如 `_fxtest`）
@@ -86,7 +92,7 @@ node bin/wm.mjs list --category orbit      # 同上
 node bin/wm.mjs list --json                # JSON：id、name、category、slots、desc、tags、ref、params（参数名）、duration、file
 ```
 
-`ref` 字段区分来源：`animos` 为复刻，`original` 为原创。`slots` 是建议素材张数，`duration` 是默认循环秒数。
+`slots` 是建议素材张数，`duration` 是默认循环秒数。
 
 ### info：查看模板参数
 
@@ -299,29 +305,29 @@ node bin/wm.mjs still  --spec spec.json cover-flow --at 0.5 --res 360 --out s.pn
 - `fx`：`motionBlur`、`shutter`（0.5）、`grain`、`vignette`、`aberration`（色差）
 - 其他：`count`、`cardRatio`、`shadow`
 
-## 分类与数量
+## 分类一览（100 个原创，ref: "original"）
 
-`wm list` 共 100 个模板（不含 `_` 测试模板）：70 个复刻，30 个原创（★，`ref: "original"`）。
+`wm list` 共收录 100 款原创动效模板（不含 `_` 开头的内部调试模板），按视觉动态特征划分为 16 大分类：
 
-| 分类 | 总数 | 复刻 | 原创 | 模板（★ = 原创） |
-|---|---:|---:|---:|---|
-| 3d-perspective | 14 | 12 | 2 | `card-globe` `card-tunnel` `cover-ring-vertical` `cover-ring` `depth-stack-scroll` `double-helix`★ `moebius-ribbon`★ `orbit-globe` `parallax-totem` `showcase-stream` `sphere-cascade` `sphere-wall` `spiral-stream` `totem-wall` |
-| carousel-flow | 12 | 10 | 2 | `arc-carousel`★ `card-totem` `carousel-flow` `cover-flow-vertical` `cover-flow` `diagonal-carousel` `film-strip` `focus-slider` `hero-reel` `mosaic-marquee` `parallax-rows`★ `wheel-carousel` |
-| device-mockup | 3 | 0 | 3 | `phone-hero-swing`★ `phone-scroll-feed`★ `phone-trio-fan`★ |
-| flythrough | 1 | 0 | 1 | `gallery-corridor`★ |
-| glitch | 1 | 0 | 1 | `glitch-cut-slideshow`★ |
-| grid | 10 | 8 | 2 | `bento-reshuffle`★ `column-drift` `feed-scroll` `flip-grid` `grid-reveal` `masonry-scroll`★ `pop-grid` `spotlight-zoom` `ticker-loop` `ticker-tilt` |
-| isometric | 5 | 3 | 2 | `iso-cascade` `iso-endless-stairs`★ `iso-equalizer`★ `iso-focus` `iso-orbit` |
-| kinetic-type | 2 | 0 | 2 | `title-stagger-rise`★ `word-slot-roll`★ |
-| light-fx | 3 | 0 | 3 | `glow-sweep-grid`★ `light-leak-cuts`★ `prism-converge`★ |
-| multiscene | 15 | 14 | 1 | `bloom-belt` `collage-reel` `fan-shuffle` `flyby-rolodex` `grid-dive` `grid-zoom-strip` `lens-orbit` `pop-parade` `product-launch`★ `scatter-dial` `spread-columns` `spread-rows` `stairway` `sweep-ring` `triple-scene` |
-| orbit | 10 | 8 | 2 | `atom-orbits`★ `focus-orbit` `orbit-bloom` `orbit-carousel` `orbit-showcase` `photo-orbit` `planet-rings`★ `vortex-spin` `wheel-spin-bottom` `wheel-spin` |
-| particles | 2 | 0 | 2 | `bokeh-cover-flow`★ `dust-hero-light`★ |
-| reveal-wipe | 4 | 4 | 0 | `diagonal-wipe` `mosaic-reveal` `split-reveal` `stripe-reveal` |
-| spotlight-focus | 6 | 4 | 2 | `center-stage` `deck-peel` `focus-rack`★ `focus-shift` `polaroid-develop`★ `zoom-parallax` |
-| stack-scatter | 9 | 7 | 2 | `card-fountain`★ `card-toss` `cascade-deck` `cascade-drop` `desk-photo-toss`★ `image-trail` `position-dance` `poster-burst` `stack-slide` |
-| transitions | 3 | 0 | 3 | `spin-zoom`★ `whip-pan`★ `zoom-punch`★ |
-| **合计** | **100** | **70** | **30** | |
+| 分类 | 数量 | 特点与适用场景 | 包含模板 |
+|---|---:|---|---|
+| 3d-perspective | 14 | 3D 透视视界：球面张量、莫比乌斯环与纵深空间穿梭 | `card-globe` `card-tunnel` `cover-ring-vertical` `cover-ring` `depth-stack-scroll` `double-helix` `moebius-ribbon` `orbit-globe` `parallax-totem` `showcase-stream` `sphere-cascade` `sphere-wall` `spiral-stream` `totem-wall` |
+| carousel-flow | 12 | 轮播流转：经典 Cover Flow、弧形环视与纵向瀑布流 | `arc-carousel` `card-totem` `carousel-flow` `cover-flow-vertical` `cover-flow` `diagonal-carousel` `film-strip` `focus-slider` `hero-reel` `mosaic-marquee` `parallax-rows` `wheel-carousel` |
+| multiscene | 15 | 多场景叙事：分段多镜头切换、展开展布与运镜剪辑 | `bloom-belt` `collage-reel` `fan-shuffle` `flyby-rolodex` `grid-dive` `grid-zoom-strip` `lens-orbit` `pop-parade` `product-launch` `scatter-dial` `spread-columns` `spread-rows` `stairway` `sweep-ring` `triple-scene` |
+| grid | 10 | 阵列网格：流式滚动、Bento 动态重排与聚光缩放 | `bento-reshuffle` `column-drift` `feed-scroll` `flip-grid` `grid-reveal` `masonry-scroll` `pop-grid` `spotlight-zoom` `ticker-loop` `ticker-tilt` |
+| orbit | 10 | 轨道环绕：天体行星环、原子轨道与向心涡流旋转 | `atom-orbits` `focus-orbit` `orbit-bloom` `orbit-carousel` `orbit-showcase` `photo-orbit` `planet-rings` `vortex-spin` `wheel-spin-bottom` `wheel-spin` |
+| stack-scatter | 9 | 叠卡与散落：物理散落、瀑布喷泉与桌面照片抛掷 | `card-fountain` `card-toss` `cascade-deck` `cascade-drop` `desk-photo-toss` `image-trail` `position-dance` `poster-burst` `stack-slide` |
+| spotlight-focus | 6 | 焦点特写：中心舞台特写、景深虚化与拍立得显影 | `center-stage` `deck-peel` `focus-rack` `focus-shift` `polaroid-develop` `zoom-parallax` |
+| isometric | 5 | 等轴测测绘：2.5D 无尽阶梯、等离子跳动与轨道升降 | `iso-cascade` `iso-endless-stairs` `iso-equalizer` `iso-focus` `iso-orbit` |
+| reveal-wipe | 4 | 遮罩转场：斜向切割、马赛克揭露与条纹划变 | `diagonal-wipe` `mosaic-reveal` `split-reveal` `stripe-reveal` |
+| device-mockup | 3 | 设备样机：手机信息流、三机扇形陈列与摆动特写 | `phone-hero-swing` `phone-scroll-feed` `phone-trio-fan` |
+| light-fx | 3 | 光效渲染：扫光网格、漏光胶片与棱镜色彩聚焦 | `glow-sweep-grid` `light-leak-cuts` `prism-converge` |
+| transitions | 3 | 动态转场：旋转推拉、极速横摇与冲击放大 | `spin-zoom` `whip-pan` `zoom-punch` |
+| kinetic-type | 2 | 动态排版：交错字符升起与文字滚轮卡槽 | `title-stagger-rise` `word-slot-roll` |
+| particles | 2 | 粒子氛围：大光斑散景与微尘光束伴随 | `bokeh-cover-flow` `dust-hero-light` |
+| flythrough | 1 | 极速穿梭：立体长廊空间极速飞越 | `gallery-corridor` |
+| glitch | 1 | 故障艺术：数字切片与信号干扰幻灯 | `glitch-cut-slideshow` |
+| **合计** | **100** | **涵盖 16 大类** | |
 
 挑模板的思路：
 

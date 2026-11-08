@@ -1,6 +1,6 @@
 ---
 name: wang-motion
-description: 用 wang-motion CLI（/workspace/wang-motion）把一组图片/视频套进卡片动效模板，输出无缝循环的 MP4 / WebM / GIF / PNG。用户要做作品集展示、产品图轮播、相册动效、卡片墙、3D 环绕、手机样机展示、社媒循环短片时加载。100 个模板（70 复刻 + 30 原创），16 个分类。
+description: 用 wang-motion CLI（/workspace/wang-motion）把一组图片/视频套进卡片动效模板，输出无缝循环的 MP4 / WebM / GIF / PNG。用户要做作品集展示、产品图轮播、相册动效、卡片墙、3D 环绕、手机样机展示、社媒循环短片时加载。100 个原创模板（ref: "original"），16 个分类。
 ---
 
 # wang-motion
@@ -168,24 +168,24 @@ wm render sphere-wall --media-dir ./p --ratio 21:9 --res 720 --out hero.webm
 - 用户字幕/文字偏好（如不要标点）同样适用于 `--text`
 - 汇报时给：模板 id、画幅/分辨率/时长、文件路径；不要描述内部引擎实现
 
-## 分类一览（100 = 70 复刻 + 30 原创★）
+## 分类一览（100 个原创，ref: "original"）
 
-| 分类 | 总数 | 复刻 | 原创 | 模板（★ = 原创） |
-|---|---:|---:|---:|---|
-| 3d-perspective | 14 | 12 | 2 | `card-globe` `card-tunnel` `cover-ring-vertical` `cover-ring` `depth-stack-scroll` `double-helix`★ `moebius-ribbon`★ `orbit-globe` `parallax-totem` `showcase-stream` `sphere-cascade` `sphere-wall` `spiral-stream` `totem-wall` |
-| carousel-flow | 12 | 10 | 2 | `arc-carousel`★ `card-totem` `carousel-flow` `cover-flow-vertical` `cover-flow` `diagonal-carousel` `film-strip` `focus-slider` `hero-reel` `mosaic-marquee` `parallax-rows`★ `wheel-carousel` |
-| device-mockup | 3 | 0 | 3 | `phone-hero-swing`★ `phone-scroll-feed`★ `phone-trio-fan`★ |
-| flythrough | 1 | 0 | 1 | `gallery-corridor`★ |
-| glitch | 1 | 0 | 1 | `glitch-cut-slideshow`★ |
-| grid | 10 | 8 | 2 | `bento-reshuffle`★ `column-drift` `feed-scroll` `flip-grid` `grid-reveal` `masonry-scroll`★ `pop-grid` `spotlight-zoom` `ticker-loop` `ticker-tilt` |
-| isometric | 5 | 3 | 2 | `iso-cascade` `iso-endless-stairs`★ `iso-equalizer`★ `iso-focus` `iso-orbit` |
-| kinetic-type | 2 | 0 | 2 | `title-stagger-rise`★ `word-slot-roll`★ |
-| light-fx | 3 | 0 | 3 | `glow-sweep-grid`★ `light-leak-cuts`★ `prism-converge`★ |
-| multiscene | 15 | 14 | 1 | `bloom-belt` `collage-reel` `fan-shuffle` `flyby-rolodex` `grid-dive` `grid-zoom-strip` `lens-orbit` `pop-parade` `product-launch`★ `scatter-dial` `spread-columns` `spread-rows` `stairway` `sweep-ring` `triple-scene` |
-| orbit | 10 | 8 | 2 | `atom-orbits`★ `focus-orbit` `orbit-bloom` `orbit-carousel` `orbit-showcase` `photo-orbit` `planet-rings`★ `vortex-spin` `wheel-spin-bottom` `wheel-spin` |
-| particles | 2 | 0 | 2 | `bokeh-cover-flow`★ `dust-hero-light`★ |
-| reveal-wipe | 4 | 4 | 0 | `diagonal-wipe` `mosaic-reveal` `split-reveal` `stripe-reveal` |
-| spotlight-focus | 6 | 4 | 2 | `center-stage` `deck-peel` `focus-rack`★ `focus-shift` `polaroid-develop`★ `zoom-parallax` |
-| stack-scatter | 9 | 7 | 2 | `card-fountain`★ `card-toss` `cascade-deck` `cascade-drop` `desk-photo-toss`★ `image-trail` `position-dance` `poster-burst` `stack-slide` |
-| transitions | 3 | 0 | 3 | `spin-zoom`★ `whip-pan`★ `zoom-punch`★ |
-| **合计** | **100** | **70** | **30** | |
+| 分类 | 数量 | 包含模板 |
+|---|---:|---|
+| 3d-perspective | 14 | `card-globe` `card-tunnel` `cover-ring-vertical` `cover-ring` `depth-stack-scroll` `double-helix` `moebius-ribbon` `orbit-globe` `parallax-totem` `showcase-stream` `sphere-cascade` `sphere-wall` `spiral-stream` `totem-wall` |
+| carousel-flow | 12 | `arc-carousel` `card-totem` `carousel-flow` `cover-flow-vertical` `cover-flow` `diagonal-carousel` `film-strip` `focus-slider` `hero-reel` `mosaic-marquee` `parallax-rows` `wheel-carousel` |
+| device-mockup | 3 | `phone-hero-swing` `phone-scroll-feed` `phone-trio-fan` |
+| flythrough | 1 | `gallery-corridor` |
+| glitch | 1 | `glitch-cut-slideshow` |
+| grid | 10 | `bento-reshuffle` `column-drift` `feed-scroll` `flip-grid` `grid-reveal` `masonry-scroll` `pop-grid` `spotlight-zoom` `ticker-loop` `ticker-tilt` |
+| isometric | 5 | `iso-cascade` `iso-endless-stairs` `iso-equalizer` `iso-focus` `iso-orbit` |
+| kinetic-type | 2 | `title-stagger-rise` `word-slot-roll` |
+| light-fx | 3 | `glow-sweep-grid` `light-leak-cuts` `prism-converge` |
+| multiscene | 15 | `bloom-belt` `collage-reel` `fan-shuffle` `flyby-rolodex` `grid-dive` `grid-zoom-strip` `lens-orbit` `pop-parade` `product-launch` `scatter-dial` `spread-columns` `spread-rows` `stairway` `sweep-ring` `triple-scene` |
+| orbit | 10 | `atom-orbits` `focus-orbit` `orbit-bloom` `orbit-carousel` `orbit-showcase` `photo-orbit` `planet-rings` `vortex-spin` `wheel-spin-bottom` `wheel-spin` |
+| particles | 2 | `bokeh-cover-flow` `dust-hero-light` |
+| reveal-wipe | 4 | `diagonal-wipe` `mosaic-reveal` `split-reveal` `stripe-reveal` |
+| spotlight-focus | 6 | `center-stage` `deck-peel` `focus-rack` `focus-shift` `polaroid-develop` `zoom-parallax` |
+| stack-scatter | 9 | `card-fountain` `card-toss` `cascade-deck` `cascade-drop` `desk-photo-toss` `image-trail` `position-dance` `poster-burst` `stack-slide` |
+| transitions | 3 | `spin-zoom` `whip-pan` `zoom-punch` |
+| **合计** | **100** | |
