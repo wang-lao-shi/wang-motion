@@ -1,0 +1,28 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style></head>
+<body><canvas id="c"></canvas>
+<script type="module">
+import { Engine, loadFonts } from './core.js';
+let eng;
+window.WM = {
+  async init(spec, tplPath, mediaUrls, bgUrl, logoUrl) {
+    const mod = await import('./templates/' + tplPath);
+    const tpl = mod.default;
+    const c = document.getElementById('c');
+    await loadFonts();
+    eng = new Engine(c);
+    eng.setSize(spec.width, spec.height);
+    await eng.loadMedia(mediaUrls);
+    if (bgUrl) await eng.setBackgroundImage(bgUrl);
+    eng.configure(spec, tpl);
+    await eng.setupOverlays(spec, logoUrl);
+    if (document.fonts) await document.fonts.ready;
+    return { ok: true, name: tpl.name };
+  },
+  async frame(t, fps, fmt = 'jpeg', q = 0.94) {
+    await eng.renderAt(t, fps);
+    return document.getElementById('c').toDataURL('image/' + fmt, q);
+  },
+  async draw(t, fps) { await eng.renderAt(t, fps); return true; },
+};
+window.WM_READY = true;
+</script></body></html>

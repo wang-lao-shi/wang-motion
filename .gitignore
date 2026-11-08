@@ -1,0 +1,25 @@
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Output & temp
+out/
+output/
+dist/
+*.mp4
+*.webm
+*.gif
+!examples/**/*.png
+!examples/**/*.jpg
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

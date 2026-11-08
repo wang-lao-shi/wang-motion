@@ -1,0 +1,26 @@
+{
+  "name": "wang-motion",
+  "version": "0.1.0",
+  "description": "3D 卡片动效模板渲染器与在线动效工坊",
+  "type": "module",
+  "bin": {
+    "wm": "bin/wm.mjs"
+  },
+  "homepage": "https://w18774994563.github.io/wang-motion/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/w18774994563/wang-motion.git"
+  },
+  "keywords": [
+    "motion-graphics",
+    "threejs",
+    "animation",
+    "card-motion",
+    "video-generator"
+  ],
+  "author": "汪老师",
+  "license": "MIT",
+  "dependencies": {
+    "playwright-core": "1.56.0"
+  }
+}
