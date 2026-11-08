@@ -6,6 +6,10 @@
 > 🌐 **在线体验 / 动效工坊**：[https://w18774994563.github.io/wang-motion/](https://w18774994563.github.io/wang-motion/)  
 > 无需安装任何环境，直接在浏览器中交互体验 100 款 3D 卡片动效、调节参数并实时导出视频。
 
+| 首页大厅 | 3D 演播探索页 |
+|:---:|:---:|
+| [![首页大厅](docs/assets/preview-home.png)](https://w18774994563.github.io/wang-motion/) | [![3D 演播探索页](docs/assets/preview-studio.png)](https://w18774994563.github.io/wang-motion/?view=studio) |
+
 卡片动效模板渲染器：给一组图片或视频，选一个模板，输出 MP4、WebM、GIF 或静帧 PNG。适合做作品集展示、产品图轮播、相册动效、社媒短视频片头。
 
 - 100 个原创模板（ref: "original"），分 16 个分类
@@ -15,9 +19,7 @@
 
 ## 宣传片演示
 
-https://github.com/w18774994563/wang-motion/releases/download/v0.1.0/wang-motion-promo-720p.mp4
-
-> 💡 *如果浏览器无法内嵌播放上方视频，可直接点击 [宣传片直链下载/播放](https://github.com/w18774994563/wang-motion/releases/download/v0.1.0/wang-motion-promo-720p.mp4)。*
+[![WANG MOTION 官方宣传片演示 (点击立即播放)](docs/assets/video-player-poster.png)](https://github.com/w18774994563/wang-motion/releases/download/v0.1.0/wang-motion-promo-720p.mp4)
 
 ## 当前内容
 

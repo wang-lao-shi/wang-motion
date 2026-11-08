@@ -2446,6 +2446,9 @@ function initNav() {
   document.getElementById("navFeatured").addEventListener("click", () => wmApplyFilter("3d-perspective", "featured", true));
   document.getElementById("navFavorites").addEventListener("click", () => wmApplyFilter("__fav", "favs", true));
   document.getElementById("btnMyFavs").addEventListener("click", () => wmApplyFilter("__fav", "favs", true));
+  if (location.search.includes("view=studio") || location.hash === "#studio") {
+    setTimeout(() => wmSwitchView("studio"), 150);
+  }
 }
 
 // ==========================================
