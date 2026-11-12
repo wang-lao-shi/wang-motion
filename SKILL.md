@@ -114,6 +114,10 @@ wm render sphere-wall --media-dir ./p --ratio 21:9 --res 720 --out hero.webm
 
 **加配乐**：`--audio bgm.mp3`，并把 `--duration` 设成音乐长度或其约数。
 
+
+## 素材张数
+每个模板「用得上」的图片数不同（如 `card-globe` 22 张、`cover-ring` 8 张、`arc-carousel` 不限），详见 `docs/capacity.md`。素材少于容量会循环重复；多于容量时只用前 N 张，其余不出现，需要的话分批渲染。`card-globe` / `orbit-globe` 加 `--param mediaSpread=unique` 可以让每张卡用不同的图。
+
 ## 选模板
 
 先按用途锁定分类，再用 `sheet` 出 3–6 个候选让用户挑（或自己看图挑）：

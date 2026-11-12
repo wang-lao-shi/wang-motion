@@ -16,6 +16,7 @@ export default {
     motion: P.choice('Motion', 'continuous', ['continuous', 'waypoints', 'waypointsNoZoom']),
     direction: P.choice('Direction', 'left', ['left', 'right', 'alternate']),
     perspective: P.perspective(34),
+    mediaSpread: P.choice('Media spread', 'columns', ['columns', 'unique']),
     speed: P.speed(1),
   }),
   shadow: false, sheen: 0.2, rim: 0.3, edgeX: 0.15, edgeW: 0.0025, depthWrite: true,
@@ -47,6 +48,8 @@ export function globe(ctx, o) {
   const tilt = M.rad(p.tilt);
   const out = [];
   const camZ = ctx.camDist;
+  // mediaSpread: 'columns' (default) = one image per longitude column; 'unique' = every card takes the next image (n images fill n cards before repeating)
+  const uniq = p.mediaSpread === 'unique'; let seq = 0;
   for (let r = 0; r < rows; r++) {
     const lat = (o.lats ? o.lats[r] : (-Math.PI / 2 + (r + 0.5) * Math.PI / rows));
     const cl = Math.cos(lat);
@@ -67,7 +70,7 @@ export function globe(ctx, o) {
         const yy = y * Math.cos(tilt) - z * Math.sin(tilt), zz = y * Math.sin(tilt) + z * Math.cos(tilt);
         y = yy; z = zz;
       }
-      const media = o.media ? o.media(r, i, K) : ((Math.floor((i + 0.5) / K * eqCount) + (o.mediaOff ?? -2)) % n + n) % n;
+      const media = uniq ? (seq++ % n + n) % n : o.media ? o.media(r, i, K) : ((Math.floor((i + 0.5) / K * eqCount) + (o.mediaOff ?? -2)) % n + n) % n;
       // facing (normal . toCamera) approx
       const nx = x / R, ny = y / R, nz = z / R;
       const tc = [-x, -y, camZ - z]; const tl = Math.hypot(...tc);

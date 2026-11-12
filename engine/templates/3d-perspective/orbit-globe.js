@@ -17,6 +17,7 @@ export default {
     direction: P.choice('Direction', 'left', ['left', 'right', 'alternate']),
     perspective: P.perspective(16),
     cardOpacity: P.pct('Card opacity', 94),
+    mediaSpread: P.choice('Media spread', 'columns', ['columns', 'unique']),
     speed: P.speed(1),
   }),
   shadow: false, sheen: 0.15, edgeTop: 0.7, edgeBottom: 0.8, edgeW: 0.003,
