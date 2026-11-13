@@ -6,10 +6,10 @@
   "bin": {
     "wm": "bin/wm.mjs"
   },
-  "homepage": "https://w18774994563.github.io/wang-motion/",
+  "homepage": "https://wang-lao-shi.github.io/wang-motion/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/w18774994563/wang-motion.git"
+    "url": "git+https://github.com/wang-lao-shi/wang-motion.git"
   },
   "keywords": [
     "motion-graphics",

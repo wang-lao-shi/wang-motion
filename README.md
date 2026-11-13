@@ -1,14 +1,14 @@
 # wang-motion
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-在线体验-brightgreen.svg)](https://w18774994563.github.io/wang-motion/)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-在线体验-brightgreen.svg)](https://wang-lao-shi.github.io/wang-motion/)
 
-> 🌐 **在线体验 / 动效工坊**：[https://w18774994563.github.io/wang-motion/](https://w18774994563.github.io/wang-motion/)  
+> 🌐 **在线体验 / 动效工坊**：[https://wang-lao-shi.github.io/wang-motion/](https://wang-lao-shi.github.io/wang-motion/)<br>
 > 无需安装任何环境，直接在浏览器中交互体验 100 款 3D 卡片动效、调节参数并实时导出视频。
 
 | 首页大厅 | 3D 演播探索页 |
 |:---:|:---:|
-| [![首页大厅](docs/assets/preview-home.png)](https://w18774994563.github.io/wang-motion/) | [![3D 演播探索页](docs/assets/preview-studio.png)](https://w18774994563.github.io/wang-motion/?view=studio) |
+| [![首页大厅](docs/assets/preview-home.png)](https://wang-lao-shi.github.io/wang-motion/) | [![3D 演播探索页](docs/assets/preview-studio.png)](https://wang-lao-shi.github.io/wang-motion/?view=studio) |
 
 卡片动效模板渲染器：给一组图片或视频，选一个模板，输出 MP4、WebM、GIF 或静帧 PNG。适合做作品集展示、产品图轮播、相册动效、社媒短视频片头。
 
