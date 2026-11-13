@@ -9,6 +9,7 @@ out/
 output/
 dist/
 *.mp4
+!docs/assets/*.mp4
 *.webm
 *.gif
 !examples/**/*.png
