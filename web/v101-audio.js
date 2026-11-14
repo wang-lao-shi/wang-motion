@@ -12,6 +12,7 @@ const WMA = {
   buf: null, bufKey: "",
 };
 const wmaPanels = [];
+let wmaPop = null, wmaPopFor = null;
 const wmaEl = new Audio(); wmaEl.preload = "auto";
 let wmaBlocked = false, wmaPending = false, wmaRamp = 0, wmaWasOn = false;
 try { const v = JSON.parse(localStorage.getItem("wm_audio") || "null"); if (v) ["volume", "offset", "fadeIn", "fadeOut", "loop", "fit", "muted", "link", "kind", "name", "url"].forEach(k => { if (v[k] != null) WMA[k] = v[k]; }); } catch (e) { }
@@ -168,18 +169,23 @@ function wmaRefresh(fromSlider) {
   }
   document.querySelectorAll(".wma-tool").forEach(b => { b.classList.toggle("on", wmaOn() && !WMA.muted); b.title = wmaOn() ? `背景音乐：${WMA.name}${WMA.muted ? "（已静音）" : ""}` : "背景音乐：上传本地文件或粘贴网址"; });
   if (typeof wmExportUpdateInfo === "function" && document.getElementById("wmExportModal")?.classList.contains("open")) wmExportUpdateInfo();
+  if (wmaPop?.classList.contains("open")) wmaPlacePop();
 }
 
 // 工具栏按钮 + 弹层
-let wmaPop = null, wmaPopFor = null;
+function wmaPlacePop() {
+  if (!wmaPop || !wmaPopFor) return;
+  const r = wmaPopFor.getBoundingClientRect(), pw = wmaPop.offsetWidth, ph = wmaPop.offsetHeight;
+  const x = Math.max(8, Math.min(window.innerWidth - pw - 8, r.left + r.width / 2 - pw / 2));
+  let y = r.top - ph - 10;
+  if (y < 8) y = r.bottom + 10;
+  y = Math.max(8, Math.min(y, window.innerHeight - ph - 8));
+  wmaPop.style.left = x + "px"; wmaPop.style.top = y + "px";
+}
 function wmaTogglePop(btn) {
   if (!wmaPop) { wmaPop = document.createElement("div"); wmaPop.className = "wm-spd-pop wma-pop"; wmaPop.innerHTML = `<div class="hd"><b>背景音乐</b><span>预览、演示与导出共用</span></div><div class="wma-body"></div>`; document.body.appendChild(wmaPop); wmaPanel(wmaPop.querySelector(".wma-body")); wmaPop.addEventListener("mousedown", (e) => e.stopPropagation()); document.addEventListener("mousedown", () => wmaPop.classList.remove("open")); window.addEventListener("resize", () => wmaPop.classList.remove("open")); }
   if (wmaPop.classList.contains("open") && wmaPopFor === btn) { wmaPop.classList.remove("open"); return; }
   wmaPopFor = btn; wmaPop.classList.add("open"); wmaRefresh();
-  const r = btn.getBoundingClientRect(), pw = 340, ph = wmaPop.offsetHeight || 260;
-  let x = Math.min(window.innerWidth - pw - 8, Math.max(8, r.left + r.width / 2 - pw / 2)), y = r.top - ph - 10;
-  if (y < 8) y = r.bottom + 10;
-  wmaPop.style.left = x + "px"; wmaPop.style.top = y + "px";
 }
 (function wmaInitTools() {
   const mk = (after) => {

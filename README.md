@@ -10,7 +10,7 @@
 |:---:|:---:|
 | [![首页大厅](docs/assets/preview-home.png)](https://wang-lao-shi.github.io/wang-motion/) | [![3D 演播探索页](docs/assets/preview-studio.png)](https://wang-lao-shi.github.io/wang-motion/?view=studio) |
 
-卡片动效模板渲染器：给一组图片或视频，选一个模板，输出 MP4、WebM、GIF、静帧 PNG，或单文件离线播放的交互网页。当前版本 **v10.1**（更新见 `CHANGELOG.md`）。适合做作品集展示、产品图轮播、相册动效、社媒短视频片头。
+卡片动效模板渲染器：给一组图片或视频，选一个模板，输出 MP4、WebM、GIF、静帧 PNG，或单文件离线播放的交互网页。当前版本 **v10.1.1**（更新见 `CHANGELOG.md`）。适合做作品集展示、产品图轮播、相册动效、社媒短视频片头。
 
 - 100 个模板：70 个复刻 + 30 个原创，分 16 个分类
 - 全部自有代码（Three.js + Playwright 无头 Chromium），不依赖在线服务
@@ -33,7 +33,7 @@ https://github.com/user-attachments/assets/44e17cb5-28a1-414c-9407-cf7e9142c573
 
 ## 作为 Agent Skill 使用
 
-从 [v10.1 发布页](https://github.com/wang-lao-shi/wang-motion/releases/tag/v10.1.0)下载 Skill 压缩包，将解压后的 `wang-motion` 整个目录放入所用工具的技能目录。Codex 默认位置为 `~/.codex/skills/wang-motion`（Windows：`%USERPROFILE%\.codex\skills\wang-motion`）。请保留 `SKILL.md`、`bin/`、`engine/` 和其他配套文件，在该目录执行下方的依赖安装；需要时开启新会话以重新发现 Skill。
+从 [v10.1 发布页](https://github.com/wang-lao-shi/wang-motion/releases/tag/v10.1.1)下载 Skill 压缩包，将解压后的 `wang-motion` 整个目录放入所用工具的技能目录。Codex 默认位置为 `~/.codex/skills/wang-motion`（Windows：`%USERPROFILE%\.codex\skills\wang-motion`）。请保留 `SKILL.md`、`bin/`、`engine/` 和其他配套文件，在该目录执行下方的依赖安装；需要时开启新会话以重新发现 Skill。
 ## 安装
 
 需要 Node 18 或更高版本。
