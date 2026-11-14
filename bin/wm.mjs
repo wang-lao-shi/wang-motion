@@ -162,14 +162,28 @@ function demoMedia(n = 12) {
   for (let i = 1; i <= n; i++) spawnSync(im, ['-size', '800x600', `gradient:#${cols[(i - 1) % 12]}-#111111`, '-gravity', 'center', '-fill', 'white', '-pointsize', '260', '-annotate', '0', String(i), '-fill', 'none', '-stroke', 'white', '-strokewidth', '12', '-draw', 'rectangle 20,20 780,580', path.join(dir, `demo${String(i).padStart(2, '0')}.png`)]);
   return demoMedia(n);
 }
+// v10.2：一批素材的主比例（中位数，±3% 吸附到常用比例），与 engine/adapt.js mainRatio 一致
+function mediaMainRatio(list) {
+  const rs = [], hasProbe = hasCmd('ffprobe'), hasFfmpeg = hasCmd('ffmpeg');
+  for (const f of list) {
+    let w, h;
+    if (hasProbe) { const r = spawnSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height', '-of', 'csv=p=0', f], { encoding: 'utf8' }); [w, h] = (r.stdout || '').trim().split(',').map(Number); }
+    if (!(w > 0 && h > 0) && hasFfmpeg) { const r = spawnSync('ffmpeg', ['-hide_banner', '-i', f], { encoding: 'utf8' }); const m = /Video:[^\r\n]*?\b(\d+)x(\d+)\b/.exec(r.stderr || ''); if (m) [w, h] = [+m[1], +m[2]]; }
+    if (w > 0 && h > 0) rs.push(w / h);
+  }
+  if (rs.length < list.length) console.error('warning: could not read some media dimensions; install ffprobe or ffmpeg for --ratio media');
+  if (!rs.length) { console.error('warning: using 4:3 because no media dimensions could be read'); return 4 / 3; } rs.sort((x, y) => x - y); const k = rs.length >> 1; const med = rs.length % 2 ? rs[k] : Math.sqrt(rs[k - 1] * rs[k]);
+  for (const s of [1, 4 / 3, 3 / 4, 3 / 2, 2 / 3, 16 / 9, 9 / 16, 4 / 5, 5 / 4, 21 / 9, 2]) if (Math.abs(med / s - 1) < 0.03) return s; return med;
+}
 function hasCmd(c) { return process.platform === 'win32' ? spawnSync('where.exe', [c], { stdio: 'ignore' }).status === 0 : spawnSync('sh', ['-c', `command -v ${c}`]).status === 0; }
 
 // ---------------- spec ----------------
 function buildSpec(a, tpl, def = {}) {
   let spec = {};
   if (a.spec) spec = JSON.parse(fs.readFileSync(a.spec, 'utf8'));
-  const ratio = a.ratio || spec.ratio || def.ratio || tpl.defaultRatio || '16:9';
-  const [rw, rh] = RATIOS[ratio] || ratio.split(':').map(Number);
+  let ratio = a.ratio || spec.ratio || def.ratio || tpl.defaultRatio || '16:9';
+  let [rw, rh] = RATIOS[ratio] || String(ratio).split(':').map(Number);
+  if (ratio === 'media') { const r = mediaMainRatio(collectMedia(a, spec)); [rw, rh] = r >= 1 ? [r, 1] : [1, 1 / r]; ratio = `${+rw.toFixed(4)}:${+rh.toFixed(4)}`; } // v10.2 画布跟素材
   const res = Number(a.res || spec.res || def.res || 1080);
   let W, H; if (a.width && a.height) { W = +a.width; H = +a.height; } else if (rw >= rh) { H = res; W = Math.round((res * rw) / rh); } else { W = res; H = Math.round((res * rh) / rw); }
   W -= W % 2; H -= H % 2;
@@ -178,7 +192,14 @@ function buildSpec(a, tpl, def = {}) {
   spec.fps = Number(a.fps || spec.fps || 30);
   spec.params = normParams({ ...(spec.params || {}), ...a.param }, tpl.params || {});
   if (a.count) spec.count = +a.count;
+  // v10.2 卡片比例：命令行默认「跟随素材」；--spec 读进来的旧文件没有这个字段 = 模板原样（老作品重渲不变）
   if (a['card-ratio']) spec.cardRatio = a['card-ratio'];
+  else if (!a.spec && !def.keepTemplate) spec.cardRatio = 'media';
+  if (spec.cardRatio === 'template') delete spec.cardRatio; // 模板原样 = v9：不写 cardRatio，模板用自己的默认形状
+  if (a.fit) { if (!['cover', 'blur', 'color'].includes(a.fit)) { console.error(`error: --fit ${a.fit}: use cover | blur | color`); process.exit(2); } spec.fit = a.fit; }
+  if (a['fit-color']) { spec.fitColor = hexCol(a['fit-color']); if (!a.fit) spec.fit = 'color'; }
+  if (a['card-mix']) spec.cardMix = a['card-mix'] === 'own' ? 'own' : undefined;
+  if (a.focus) { spec.focus = spec.focus || []; for (const it of String(a.focus).split(/[;\s]+/).filter(Boolean)) { const m = it.match(/^(\d+):([\d.]+),([\d.]+)$/); if (!m) { console.error(`error: --focus ${it}: use N:x,y (N from 1; x,y 0..1)`); process.exit(2); } spec.focus[+m[1] - 1] = [+m[2], +m[3]]; } for (let i = 0; i < spec.focus.length; i++) if (spec.focus[i] === undefined) spec.focus[i] = null; }
   if (a.padding) spec.params.padding = +a.padding;
   if (a.radius) spec.params.cornerRadius = +a.radius;
   if (a.shadow) spec.shadow = a.shadow !== 'false';
@@ -282,7 +303,7 @@ async function cmdSheet(a) {
   const res = Number(a.res || specFile.res || 360);
   let page; const files = [];
   for (const tpl of tpls) {
-    const spec = buildSpec(a, tpl, { res, ratio: '1:1', intro: iFr ? 'stagger' : undefined }); const media = collectMedia(a, spec);
+    const spec = buildSpec(a, tpl, { res, ratio: '1:1', intro: iFr ? 'stagger' : undefined, keepTemplate: true }); const media = collectMedia(a, spec);
     page = await openPage(br, spec.width, spec.height);
     await initPage(page, spec, tpl, media);
     if (iFr) {
@@ -469,7 +490,9 @@ async function cmdHtml(a) {
     }
     audio = { src, name: au.name, volume: au.volume, offset: au.offset, fadeIn: au.fadeIn, fadeOut: au.fadeOut, loop: au.loop };
   }
-  const data = { v: 10, template: tpl.id, title: tpl.name, aspect: width / height, spec: { ...rest, background: bg }, speed: spec.speed || 1, intro, player: { ...pl, defaultIntro: imode }, batches: B, batch: pl.allBatches ? bi : 0, bgImage, audio };
+  let focusB = null; // v10.2 焦点按批次对齐（每批的第 k 张 = 引擎素材 k）
+  if (Array.isArray(rest.focus)) { const F = rest.focus; focusB = keep.map((b) => b.map((f) => F[media.indexOf(f)] || null)); if (!focusB.some((g) => g.some(Boolean))) focusB = null; delete rest.focus; }
+  const data = { v: 10, template: tpl.id, title: tpl.name, aspect: width / height, spec: { ...rest, background: bg }, speed: spec.speed || 1, intro, player: { ...pl, defaultIntro: imode }, batches: B, batch: pl.allBatches ? bi : 0, focusB, bgImage, audio };
   const bundle = path.join(ENGINE, 'player/wm-engine.min.js');
   if (!fs.existsSync(bundle)) { console.error('error: engine/player/wm-engine.min.js missing — run: node tools/build-bundle.mjs'); process.exit(3); }
   const out = path.resolve(a.out || `${tpl.id}.html`);
@@ -491,7 +514,7 @@ async function cmdIntroCompat(a) {
   const all = await loadTemplates(); const br = await launch(); const out = {};
   const { START_PHASE } = await import(pathToFileURL(path.join(ENGINE, 'intro.js')).href);
   for (const tpl of all) {
-    const spec = buildSpec({ ...a, intro: 'stagger' }, tpl, { res: 240, ratio: '16:9' }); const media = collectMedia(a, spec);
+    const spec = buildSpec({ ...a, intro: 'stagger' }, tpl, { res: 240, ratio: '16:9', keepTemplate: true }); const media = collectMedia(a, spec);
     const page = await openPage(br, spec.width, spec.height); await initPage(page, spec, tpl, media);
     const v = await page.evaluate((t) => window.WM.visible(t), (START_PHASE[tpl.id] ?? 0) * spec.duration);
     out[tpl.id] = { v, ok: v >= 3 };
@@ -526,7 +549,10 @@ const HELP = `wang-motion (wm) — card-motion showcase renderer
   wm render <id> [--media a,b | --media-dir d] [--ratio 16:9] [--res 1080] [--duration 16] [--fps 30]
             [--param key=value ...] [--spec spec.json] [--out out.mp4|.webm|.gif] [--audio a.mp3]
             [--bg #111 | --gradient #a,#b[,#c] --angle 90 | --bg-image p] [--text "Title"] [--logo p]
-            [--motionblur 6] [--grain 0.3] [--vignette 0.4] [--card-ratio 4:3] [--count 24]
+            [--motionblur 6] [--grain 0.3] [--vignette 0.4] [--card-ratio media|template|4:3] [--count 24]
+  v10.2 adapt: --card-ratio media (default: cards take the media's main ratio) | template (v9 shapes) | 4:3 …
+       --ratio media (canvas = media ratio)  --fit blur|cover|color [--fit-color #000] (full-frame templates)
+       --card-mix own (each card keeps its own image ratio)  --focus 1:0.5,0.3;4:0.2,0.5 (crop focus, image N from 1)
   v10  --speed 0.5 (0.1..8, whole timeline)  --intro none|stagger|whole  --intro-style rise|fly|pop|flip
        --intro-order index|center|ltr|random  --intro-dur 2.5 --intro-hold 0.3 --intro-seed 1 [--intro-phase p] [--no-ramp]
        render --loops N (intro + hold + N loops) [--length s] [--gif-once]   still --at-time 1.2   sheet --intro-frames 6

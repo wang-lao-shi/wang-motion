@@ -370,10 +370,11 @@ async function wmV10ExportHtml() {
   if (bg.type === "image" && bu) { bgImage = bu.startsWith("data:") ? bu : await wmvBlobToDataUrl(await (await fetch(bu)).blob()); }
   const spec = { duration: (tpl && tpl.duration) || 16, fps: 30, params: wmTplParams(id), fx: {}, background: bg };
   const cnt = wmSpecCount(wmMediaList(id)); if (cnt) spec.count = cnt;
+  let focusB = null; if (typeof wmAdSpec === "function") { const ad = wmAdSpec(null); Object.assign(spec, ad); if (ad.cardRatio && wmUserImgs.length) { const fb = groups.map(g => g.map(im => im && im._wmFocus ? [+im._wmFocus[0].toFixed(3), +im._wmFocus[1].toFixed(3)] : null)); if (fb.some(g => g.some(Boolean))) focusB = fb; } } // v10.2
   const mode = wmvIntroOn() ? WMV.intro.mode : "none";
   const bi = wmUserImgs.length ? wmBatchInfo(id) : { idx: 0 };
-  const data = { v: 10, template: id, title: `${t.zhName} · ${t.name}`, aspect: 16 / 9, spec, speed: playSpeed, intro: wmvIntroSpec(mode),
-    player: { controls: P.controls, autoplay: P.autoplay, imgMax: P.imgMax, allBatches: P.allBatches, defaultIntro: mode }, batches, batch: batches.length > 1 ? bi.idx : 0, bgImage, audio: typeof wmaForHtml === "function" ? await wmaForHtml() : null };
+  const data = { v: 10, template: id, title: `${t.zhName} · ${t.name}`, aspect: (typeof wmAdCanvasR === "function" && wmAdCanvasR()) || 16 / 9, spec, speed: playSpeed, intro: wmvIntroSpec(mode),
+    player: { controls: P.controls, autoplay: P.autoplay, imgMax: P.imgMax, allBatches: P.allBatches, defaultIntro: mode }, batches, batch: batches.length > 1 ? bi.idx : 0, focusB, bgImage, audio: typeof wmaForHtml === "function" ? await wmaForHtml() : null };
   wmExportSetBusy(true, 0.9, "生成网页…");
   const json = JSON.stringify(data).replace(/</g, "\\u003c");
   const esc = (x) => String(x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));

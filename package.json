@@ -1,6 +1,6 @@
 {
   "name": "wang-motion",
-  "version": "10.1.1",
+  "version": "10.2.0",
   "description": "3D 卡片动效模板渲染器与在线动效工坊",
   "type": "module",
   "bin": {

@@ -4,6 +4,7 @@ import * as THREE from './vendor/three.module.js';
 import { M, E, normParams, hash, deviceInfo } from './lib.js';
 
 export { THREE };
+import { adaptCards, mainRatio } from './adapt.js'; // v10.2
 import { timelineInfo, timeMap, applyIntro, scalePost, scaleParticles, visibleCount, normIntro, normSpeed } from './intro.js';
 export { timelineInfo, timeMap, normIntro, normSpeed };
 
@@ -951,6 +952,8 @@ function glyphSDF(rgba, w, h, R, SS = 1) {
 }
 
 export const RATIOS = { '16:9': [16, 9], '4:3': [4, 3], '1:1': [1, 1], '4:5': [4, 5], '3:4': [3, 4], '9:16': [9, 16], '21:9': [21, 9], '2:3': [2, 3], '3:2': [3, 2] };
+// v10.2 每个模板的换形方式（实测得出，见 docs/adapt.md）。没列出的 = 'area'
+export const ADAPT_MAP = {'focus-slider': 'fit', 'mosaic-marquee': 'fit', 'bento-reshuffle': 'fit', 'column-drift': 'fit', 'flip-grid': 'fit', 'grid-reveal': 'fit', 'spotlight-zoom': 'fit', 'ticker-loop': 'fit', 'ticker-tilt': 'fit', 'glow-sweep-grid': 'fit', 'grid-dive': 'fit', 'lens-orbit': 'fit', 'spread-columns': 'fit', 'spread-rows': 'fit', 'triple-scene': 'fit', 'pop-grid': 'fit', 'wheel-spin-bottom': 'fit', 'feed-scroll': 'fit', 'planet-rings': 'ratio', 'pop-parade': 'fit', 'stairway': 'fit', 'hero-reel': 'fit', 'whip-pan': 'fit', 'focus-shift': 'fit', 'fan-shuffle': 'fit'}; // 排得很紧的网格 / 跑马灯：缩进原卡片框，换形后不重叠
 const CARD_RATIOS = { 'auto': null, '1:1': 1, '4:3': 4 / 3, '3:4': 3 / 4, '4:5': 4 / 5, '16:9': 16 / 9, '9:16': 9 / 16, '3:2': 1.5, '2:3': 2 / 3 };
 
 export class Engine {
@@ -997,7 +1000,7 @@ export class Engine {
     const c = document.createElement('canvas'); c.width = 800; c.height = 600; const g = c.getContext('2d');
     const hues = [220, 260, 300, 340, 20, 160, 190, 40];
     const gr = g.createLinearGradient(0, 0, 800, 600); gr.addColorStop(0, `hsl(${hues[i % 8]},60%,55%)`); gr.addColorStop(1, `hsl(${hues[i % 8] + 40},60%,25%)`);
-    g.fillStyle = gr; g.fillRect(0, 0, 800, 600); const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return { tex, w: 800, h: 600 };
+    g.fillStyle = gr; g.fillRect(0, 0, 800, 600); const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return { tex, w: 800, h: 600, placeholder: true };
   }
 
   setSize(w, h) { this.W = w; this.H = h; this.renderer.setSize(w, h, false); this.aspect = w / h;
@@ -1007,6 +1010,8 @@ export class Engine {
 
   configure(spec, template) {
     this.spec = spec; this.tpl = template;
+    this._focus = null; // v10.2 焦点：spec.focus = [[x,y] | null, ...]（0..1，按素材顺序；0.5,0.5 = 居中）
+    if (Array.isArray(spec.focus) && spec.focus.some((f) => Array.isArray(f))) this._focus = spec.focus.map((f) => (Array.isArray(f) && f.length >= 2 ? [Math.min(1, Math.max(0, +f[0])), Math.min(1, Math.max(0, +f[1]))] : null));
     const p = {};
     for (const [k, d] of Object.entries(template.params || {})) p[k] = d.default;
     Object.assign(p, normParams(spec.params || {}, template.params || {}));
@@ -1061,7 +1066,9 @@ export class Engine {
     const view = { w: this.aspect, h: 1 }; // world size of the frame at z=0
     const inner = { w: this.aspect * (1 - pad * 2), h: 1 - pad * 2 };
     const crKey = spec.cardRatio || p.cardRatio || 'auto';
+    if (crKey === 'media') this._mR = mainRatio(this.media); // v10.2: 跟随素材 = 本批主比例
     const ratioOf = (i) => {
+      if (crKey === 'media') { if (spec.cardMix === 'own') { const m = this.media[i % this.media.length]; return m && !m.placeholder ? m.w / m.h : this._mR; } return this._mR; }
       const r = CARD_RATIOS[crKey];
       if (r) return r; const m = this.media[i % this.media.length]; return m ? m.w / m.h : 4 / 3;
     };
@@ -1069,7 +1076,8 @@ export class Engine {
     const tx0 = spec.text ? (Array.isArray(spec.text) ? spec.text[0] : spec.text) : null;
     const title = String((tx0 && tx0.content != null && tx0.content !== '') ? tx0.content : (p.text ?? ''));
     const words = title.split(/\s+/).filter(Boolean);
-    return { t, u, dur, p, n, view, inner, aspect: this.aspect, ratioOf, media: this.media, M, E, spec, pad, isPortrait: this.aspect < 1, title, words, titleSpec: tx0 || null,
+    const adaptMode = crKey === 'media' ? (this.tpl.adapt || ADAPT_MAP[this.tpl.id] || 'area') : null; // v10.2
+    return { t, u, dur, p, n, view, inner, aspect: this.aspect, ratioOf, adaptMode, media: this.media, M, E, spec, pad, isPortrait: this.aspect < 1, title, words, titleSpec: tx0 || null,
       glyphs: (str, o) => this.glyphs(str, o), device: (type, o) => deviceInfo(type, o) }; // X2: device geometry (lib.js deviceInfo) // X1: synchronous glyph metrics (browser canvas, cached);
   }
 
@@ -1323,6 +1331,9 @@ export class Engine {
     ctx.fullFrame = (z = 0, margin = 1.04) => this.fullFrame(z, margin);
     const _lo = tpl.layout(ctx) || []; // X3b: layout may return { cards, particles } (array still accepted)
     let cards = Array.isArray(_lo) ? _lo : (_lo.cards || []); let particles = Array.isArray(_lo) ? null : _lo.particles;
+    if ((this.spec.cardRatio || p.cardRatio) === 'media' && this.media.length) { // v10.2 自适应（其余情况不经过这里）
+      const md = this.media; cards = adaptCards(cards, ctx, { R: this._mR, mode: ctx.adaptMode || 'area', fit: this.spec.fit || 'blur', fitColor: this.spec.fitColor,
+        mixed: this.spec.cardMix === 'own', ratioOfMedia: (i) => { const m = md[((i % md.length) + md.length) % md.length]; return m && !m.placeholder ? m.w / m.h : this._mR; } }); }
     let _fxA = 1; // v10 intro layer (P = intro progress on the frozen start pose; null = untouched v9 path)
     if (P != null) { this.camera.updateMatrixWorld(); const r = applyIntro(cards, P, this.tl.intro, this.camera, THREE); cards = r.cards; _fxA = r.fxA; if (particles) particles = scaleParticles(particles, _fxA); }
     this._introFx = _fxA; this._rawCards = Array.isArray(_lo) ? _lo : (_lo.cards || []);
@@ -1371,6 +1382,7 @@ export class Engine {
       if (ma > fullA) U.uCover.value.set(fullA / ma, 1); else U.uCover.value.set(1, ma / fullA);
       if (c.zoom) U.uCover.value.multiplyScalar(1 / c.zoom);
       U.uCoverOff.value.set(c.panX || 0, c.panY || 0);
+      if (this._focus && c.panX == null && c.panY == null) { const f = this._focus[mi]; if (f) U.uCoverOff.value.set((f[0] - 0.5) * Math.max(0, 1 - U.uCover.value.x), (0.5 - f[1]) * Math.max(0, 1 - U.uCover.value.y)); } // v10.2 焦点
       if (useM2) { const md2 = this.media[((c.media2 % this.media.length) + this.media.length) % this.media.length]; const ma2 = md2.w / md2.h; U.uMap2.value = md2.tex;
         if (ma2 > fullA) U.uCover2.value.set(fullA / ma2, 1); else U.uCover2.value.set(1, ma2 / fullA);
         const z2 = c.zoom2 ?? c.zoom; if (z2) U.uCover2.value.multiplyScalar(1 / z2);

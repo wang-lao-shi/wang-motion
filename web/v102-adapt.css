@@ -1,0 +1,65 @@
+/* ===== v10.2 · 导出弹窗在任何窗口尺寸 / 浏览器缩放下都能看到按钮 ===== */
+.wm-modal { top: 0; left: 0; right: 0; bottom: 0; width: 100vw; height: 100vh; }
+.wm-modal.open { display: -webkit-box; display: flex; align-items: center; justify-content: center; }
+.wm-modal-box { width: 520px; max-width: calc(100vw - 24px); max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: rgba(154, 246, 207, .35) transparent; }
+@supports (height: 100dvh) { .wm-modal { height: 100dvh; } .wm-modal-box { max-height: calc(100dvh - 24px); } }
+#wmExportModal .wm-modal-box { width: 600px; }
+.wm-modal-box::-webkit-scrollbar { width: 8px; }
+.wm-modal-box::-webkit-scrollbar-thumb { background: rgba(154, 246, 207, .3); border-radius: 8px; }
+/* 按钮钉在弹窗底部：内容再多也不会被挤出窗口 */
+.wm-modal-box > .wm-ex-btns { position: -webkit-sticky; position: sticky; bottom: -20px; z-index: 5; margin: 16px -24px -20px; padding: 12px 24px 16px;
+  background: linear-gradient(180deg, rgba(8, 20, 15, .9), rgba(7, 18, 14, .99) 40%); border-top: 1px solid rgba(154, 246, 207, .14); border-radius: 0 0 20px 20px;
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.wm-modal-box > .wm-ex-btns > button { margin: 0 !important; flex: 0 1 auto; min-width: 0; }
+.wm-ex-fmts { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)) !important; }
+@media (max-height: 760px) {
+  .wm-modal-box { padding: 16px 18px 14px; }
+  .wm-modal-box > .wm-ex-btns { bottom: -14px; margin: 12px -18px -14px; padding: 10px 18px 12px; }
+  #wmExportModal .wm-ex-row { margin-top: 11px; }
+  #wmExportModal .wm-ex-fmts { margin-top: 10px; }
+  #wmExportModal .wm-ex-fmts button { padding: 7px 4px; }
+  #wmExportModal .wm-ex-info { margin-top: 11px; }
+}
+@media (max-width: 560px) {
+  .wm-modal-box { padding: 16px 14px 14px; border-radius: 16px; }
+  .wm-modal-box > .wm-ex-btns { bottom: -14px; margin: 12px -14px -14px; padding: 10px 14px 12px; border-radius: 0 0 16px 16px; }
+}
+
+/* ===== v10.2 · 素材比例 ===== */
+.wmad-tool { gap: 6px !important; }
+.wmad-tool.on { color: var(--wm-mint, #74EBC1) !important; border-color: rgba(116, 235, 193, .45) !important; }
+.wmad-pop { width: 380px; max-width: calc(100vw - 16px); }
+.wmad-pop .hd b { font-size: 15px; }
+.wmad-pop .wmad-body { margin-top: 10px; }
+.wmad-host, .wmad-body { display: flex; flex-direction: column; gap: 9px; font: 500 12px var(--wm-font, sans-serif); color: #F5F7F3; }
+.wmad-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wmad-row .k { flex: 0 0 56px; color: rgba(245, 247, 243, .6); }
+.wmad-row .wm-seg { flex: 1; gap: 6px; }
+.wmad-row .wm-seg button { height: 30px; padding: 0 10px; font-size: 12px; }
+.wmad-row .wm-seg button i { font-style: normal; opacity: .7; margin-left: 2px; }
+.wmad-color { width: 30px; height: 30px; padding: 0; border: 1px solid rgba(120, 211, 169, .3); border-radius: 8px; background: none; cursor: pointer; }
+.wmad-foot { justify-content: space-between; }
+.wmad-info { color: rgba(245, 247, 243, .55); font-size: 11px; }
+.wmad-hint { color: rgba(245, 213, 175, .85); font-size: 11.5px; line-height: 1.5; }
+.wmad-hint:empty { display: none; }
+.wmad-off .wm-seg[data-k="fit"], .wmad-off .wm-seg[data-k="canvas"] { opacity: .55; }
+.wmad-focus:disabled { opacity: .45; cursor: default; }
+.wm-sg-thumb .wmad-badge { position: absolute; right: 6px; bottom: 6px; padding: 2px 6px; border-radius: 6px; font: 650 10px var(--wm-font, sans-serif); color: #F5D5AF; background: rgba(20, 14, 8, .78); border: 1px solid rgba(245, 213, 175, .3); pointer-events: auto; }
+.wm-sg-thumb .wmad-badge.full { color: #A9F7D9; background: rgba(6, 26, 18, .78); border-color: rgba(116, 235, 193, .35); }
+.wmad-banner { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 30; max-width: calc(100% - 24px); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 10px 8px 14px; border-radius: 12px; background: rgba(8, 20, 15, .92); border: 1px solid rgba(245, 213, 175, .3); box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  font: 500 12px var(--wm-font, sans-serif); color: #F5F7F3; }
+.wmad-banner b { color: #F5D5AF; }
+.wmad-banner button { height: 26px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(116, 235, 193, .4); background: rgba(16, 37, 29, .7); color: #A9F7D9; font: 650 12px var(--wm-font, sans-serif); cursor: pointer; }
+.wmad-banner button.x { border-color: transparent; background: none; color: rgba(245, 247, 243, .55); padding: 0 6px; }
+.wmad-fbox { width: 760px !important; }
+.wmad-fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 14px; }
+.wmad-fit { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.wmad-fit small { color: rgba(245, 247, 243, .55); font-size: 11px; }
+.wmad-fimg { position: relative; width: 100%; max-height: 180px; border-radius: 8px; overflow: hidden; cursor: crosshair; touch-action: none; background: #000; }
+.wmad-fit .wmad-fimg { max-width: 100%; }
+.wmad-fimg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; user-select: none; }
+.wmad-win { position: absolute; border: 2px solid #74EBC1; border-radius: 4px; box-shadow: 0 0 0 999px rgba(0, 0, 0, .35); background: rgba(116, 235, 193, .06); pointer-events: none; }
+.wmad-fit.whole .wmad-fimg img { opacity: 1; }
+.wmad-dot { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; border: 2px solid #fff; background: #E6A36E; box-shadow: 0 0 8px rgba(0, 0, 0, .6); pointer-events: none; }
+.wmad-fit.whole .wmad-dot { display: none; }

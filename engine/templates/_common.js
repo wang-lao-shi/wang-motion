@@ -36,12 +36,13 @@ export function easeOf(name) {
   return ({ custom: _E.inOutQuart, smooth: _E.inOutCubic, natural: _E.inOutSine, slowDown: _E.outCubic, snappy: _E.outExpo, accelerate: _E.inCubic,
     elastic: _E.outElastic, bounce: _E.outBounce, overshoot: _E.outBack, impulse: _E.outQuint, swing: _E.inOutBack, linear: _E.linear })[name] || _E.inOutCubic;
 }
-export const CARD_RATIO_OPTS = ['auto', '1:1', '4:3', '3:4', '4:5', '16:9', '9:16'];
+export const CARD_RATIO_OPTS = ['auto', 'media', '1:1', '4:3', '3:4', '4:5', '16:9', '9:16'];
 P.cardRatio = (d = 'auto') => ({ type: 'choice', label: 'Card ratio', default: d, options: CARD_RATIO_OPTS });
 // card aspect: explicit Card ratio if chosen, else the template's own default shape (animos 'auto' uses a per-template shape)
 export function cardAR(ctx, def) {
   const k = ctx.spec?.cardRatio || ctx.p.cardRatio || 'auto';
-  return k === 'auto' ? def : ctx.ratioOf(0);
+  if (k === 'media') return ctx.adaptMode === 'ratio' ? ctx.ratioOf(0) : def;
+  return k === 'auto' ? def : ctx.ratioOf(0); // v10.2 'media'：模板先按原形状排，引擎再换形（engine/adapt.js）
 }
 // seamless media pattern for a lattice that scrolls `period` cells per loop: periodic in `k` with `period`,
 // extra media (n > period) are spread over rows so every image appears.

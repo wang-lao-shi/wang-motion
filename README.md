@@ -10,7 +10,7 @@
 |:---:|:---:|
 | [![首页大厅](docs/assets/preview-home.png)](https://wang-lao-shi.github.io/wang-motion/) | [![3D 演播探索页](docs/assets/preview-studio.png)](https://wang-lao-shi.github.io/wang-motion/?view=studio) |
 
-卡片动效模板渲染器：给一组图片或视频，选一个模板，输出 MP4、WebM、GIF、静帧 PNG，或单文件离线播放的交互网页。当前版本 **v10.1.1**（更新见 `CHANGELOG.md`）。适合做作品集展示、产品图轮播、相册动效、社媒短视频片头。
+卡片动效模板渲染器：给一组图片或视频，选一个模板，输出 MP4、WebM、GIF、静帧 PNG，或单文件离线播放的交互网页。当前版本 **v10.2**（更新见 `CHANGELOG.md`）。适合做作品集展示、产品图轮播、相册动效、社媒短视频片头。
 
 - 100 个模板：70 个复刻 + 30 个原创，分 16 个分类
 - 全部自有代码（Three.js + Playwright 无头 Chromium），不依赖在线服务
@@ -18,6 +18,7 @@
 - 横竖方屏通吃：16:9、9:16、1:1、4:5 等画幅都能自动适配
 - v10：0.1–8× 调速；卡片逐张 / 整体入场后再接上原动效；`wm html` 导出交互网页
 - v10.1：背景音乐（本地或网址），网页预览、导出 MP4 / PPTX / ZIP、交互网页、CLI 通用
+- v10.2：卡片形状默认跟随素材比例，图片完整显示；整屏模板模糊底 / 纯色底 / 铺满；画面比例可跟素材；裁切焦点；导出弹窗在小屏 / 缩放下按钮始终可见
 
 ## 宣传片演示
 
@@ -33,7 +34,7 @@ https://github.com/user-attachments/assets/44e17cb5-28a1-414c-9407-cf7e9142c573
 
 ## 作为 Agent Skill 使用
 
-从 [v10.1 发布页](https://github.com/wang-lao-shi/wang-motion/releases/tag/v10.1.1)下载 Skill 压缩包，将解压后的 `wang-motion` 整个目录放入所用工具的技能目录。Codex 默认位置为 `~/.codex/skills/wang-motion`（Windows：`%USERPROFILE%\.codex\skills\wang-motion`）。请保留 `SKILL.md`、`bin/`、`engine/` 和其他配套文件，在该目录执行下方的依赖安装；需要时开启新会话以重新发现 Skill。
+从 [v10.2 发布页](https://github.com/wang-lao-shi/wang-motion/releases/tag/v10.2.0)下载 Skill 压缩包，将解压后的 `wang-motion` 整个目录放入所用工具的技能目录。Codex 默认位置为 `~/.codex/skills/wang-motion`（Windows：`%USERPROFILE%\.codex\skills\wang-motion`）。请保留 `SKILL.md`、`bin/`、`engine/` 和其他配套文件，在该目录执行下方的依赖安装；需要时开启新会话以重新发现 Skill。
 ## 安装
 
 需要 Node 18 或更高版本。
@@ -223,6 +224,15 @@ node bin/wm.mjs doctor
 
 检查 Chromium、ffmpeg、ImageMagick、playwright-core、缺失的系统库、WebGL2，并报告模板数。
 
+## 素材比例（v10.2）
+
+```bash
+wm render cover-flow --media-dir ./portrait   # 竖图 → 竖卡片，图不被裁
+wm render glitch-cut-slideshow --media-dir ./portrait --ratio media   # 画面也是 9:16
+wm render cover-flow --media-dir ./p --card-ratio template           # 和 v10 一样的模板原样
+```
+网页 App：导入图片后自动跟随；舞台「比例」按钮 / 导出面板「素材比例」切换，焦点编辑、完整度角标。详见 `docs/adapt.md`。
+
 ## 背景音乐（v10.1）
 
 ```bash
@@ -238,12 +248,16 @@ wm html cover-flow --intro stagger --audio bgm.mp3 --out show.html              
 --media a.jpg,b.png,c.mp4      # 逗号分隔，按给出的顺序
 --media-dir ./photos           # 整个目录，按文件名自然排序（2.jpg 在 10.jpg 前）
 --count 24                     # 卡片数量覆盖（素材不够时循环复用）
---card-ratio 4:3               # 卡片比例（也可用 --param cardRatio=4:3），默认 auto
+--card-ratio media             # v10.2 默认：卡片 = 素材主比例；template = 模板原样；也可 4:3 / 16:9 …
+--ratio media                  # 画面比例也跟素材（9:16 的图出 9:16 视频）
+--fit blur                     # 整屏模板：blur 模糊底（默认）| color 纯色底（--fit-color #000）| cover 铺满裁切
+--card-mix own                 # 比例不一时每张保持自己的比例（默认统一按主比例）
+--focus "3:0.5,0.2"            # 第 3 张图裁切时保留上半部（x,y 0..1）
 ```
 
 - 支持格式：png、jpg/jpeg、webp、gif、svg、webm、mp4、mov、m4v
 - 视频素材在卡片里循环播放。MP4/MOV 会自动转码为 WebM（需要 ffmpeg）
-- 素材数少于模板 `slots` 时会循环复用；图片以 cover 方式填满卡片
+- 素材数少于模板 `slots` 时会循环复用；卡片默认跟随素材比例（v10.2），比例不同的图以 cover 方式按焦点填满卡片
 - 优先级：`--media-dir` > `--media` > spec 里的 `media` > 示例素材
 - 相对路径按**当前工作目录**解析（spec 里的路径也是）
 

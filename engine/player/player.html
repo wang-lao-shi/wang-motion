@@ -123,7 +123,9 @@ body.wmp-noctl .wmp-ui{display:none}
 
   function spec() {
     const iv = Object.assign({}, D.intro || {}, { mode });
-    return Object.assign({}, D.spec, { width: eng.W, height: eng.H, speed, intro: iv });
+    const o = Object.assign({}, D.spec, { width: eng.W, height: eng.H, speed, intro: iv });
+    if (D.focusB) o.focus = D.focusB[batch] || null; // v10.2 每批自己的裁切焦点
+    return o;
   }
   function size() {
     const ar = D.aspect || 16 / 9; const vw = innerWidth, vh = innerHeight;

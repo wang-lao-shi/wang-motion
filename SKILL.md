@@ -1,6 +1,6 @@
 ---
 name: wang-motion
-description: 用 wang-motion CLI把一组图片/视频套进卡片动效模板，输出无缝循环的 MP4 / WebM / GIF / PNG，或单文件离线播放的交互网页（.html）。v10 支持 0.1–8× 调速和卡片逐张 / 整体入场；v10.1 支持背景音乐（--audio 文件或网址）。用户要做作品集展示、产品图轮播、相册动效、卡片墙、3D 环绕、手机样机展示、社媒循环短片时加载。100 个模板（70 复刻 + 30 原创），16 个分类。
+description: 用 wang-motion CLI把一组图片/视频套进卡片动效模板，输出无缝循环的 MP4 / WebM / GIF / PNG，或单文件离线播放的交互网页（.html）。v10 支持 0.1–8× 调速和卡片逐张 / 整体入场；v10.1 支持背景音乐（--audio 文件或网址）；v10.2 卡片形状默认跟随素材比例（图不被裁）。用户要做作品集展示、产品图轮播、相册动效、卡片墙、3D 环绕、手机样机展示、社媒循环短片时加载。100 个模板（70 复刻 + 30 原创），16 个分类。
 ---
 
 # wang-motion
@@ -55,7 +55,7 @@ wm doctor
 # 素材
 --media a.jpg,b.png,c.webm        # 按顺序
 --media-dir ./photos              # 自然排序；优先级 media-dir > media > spec.media > 示例图
---count 24 --card-ratio 4:3
+--count 24 --card-ratio media|template|4:3   # v10.2 默认 media
 # 文字
 --text "第一行\n第二行" --text-pos bottom --text-size 6 --text-color "#fff" --text-anim loop-fade
 # Logo（尺寸只能 spec logo.size，默认 8 = 画面高 8%）
@@ -114,6 +114,18 @@ wm doctor
 - spec.json：`"audio": { "src": "bgm.mp3", "volume": 0.8, "offset": 0, "fadeIn": 0.5, "fadeOut": 1, "loop": true, "fit": false }`，相对路径先按 spec 所在目录找（网页 ZIP 里的 `audio/xxx.mp3` 可直接复现）
 - 详见 `docs/audio.md`
 
+## 素材比例自适应（v10.2）
+
+默认 `--card-ratio media`：卡片形状 = 这批素材的主比例（中位数，±3% 吸附到 16:9 / 4:3 / 1:1 / 9:16 等），**图片完整显示不被裁**。模板的位置、旋转、动画都不变，只换卡片宽高：
+- 大多数模板等面积换形（视觉分量不变，单边最多放大 1.3 倍）；网格 / 跑马灯等排得很紧的 20 个模板缩进原卡片框，换形后不重叠
+- 整屏类模板（幻灯、擦除、缩放冲击、C 位……）卡片就是画面：`--fit blur`（默认，完整显示 + 模糊底）| `color [--fit-color #000]` | `cover`（铺满裁切）。最干净的做法是 `--ratio media`：画面也跟素材比例
+- 素材比例不一：默认统一按主比例，其它比例按焦点裁切；`--card-mix own` 每张保持自己的比例
+- `--focus "3:0.5,0.2;5:0.3,0.5"`：第 N 张图（从 1 数）裁切时保留哪里（0..1，0.5,0.5 = 居中）
+- 不会变形的：手机样机屏幕（固定屏幕比例，靠焦点）、把一张图切成多块的拼图类（split-reveal、word-slot-roll、hero-reel 的拼贴段），这些按焦点裁切
+- `--card-ratio template` = v9 / v10 的模板原样（逐像素一致）；`--spec` 读进来的旧 spec 没有 `cardRatio` 字段时也按模板原样
+- 网页 App：导入图片后自动跟随；舞台工具栏「比例」和导出面板「素材比例」可切换，还有焦点编辑、比例不一 / 画面不合的提示、动效卡片上的完整度角标。没导入图片时按模板原样
+- 详见 `docs/adapt.md`
+
 ## 关键限制（会踩坑的）
 
 - `--duration` 是**整个循环**的长度：缩短 = 动作加速，不是裁剪。想要舒缓就加长（多数模板默认 12–20 s）
@@ -127,6 +139,7 @@ wm doctor
 - `--audio`（v10.1 起）不会再截短视频：长度永远按动画算，音乐循环或淡出切掉
 - 素材少于模板 `slots` 会循环复用；数量差太多时画面重复明显，告诉用户或换 slots 更少的模板
 - `sheet` 需要 ImageMagick；`render` 需要 ffmpeg
+- v10.2：`render / still / html` 默认跟随素材比例，`sheet` 和 `intro-compat` 仍按模板原样；要复现 v10 之前的画面加 `--card-ratio template`
 - 下划线开头的测试模板不在 list 里，别推荐给用户
 - v10：`--speed` 与 `--duration` 互斥；开入场后 `--duration` 仍是 1× 一圈的长度，不是视频总长；视频总长看 render 的第一行日志
 - v10：`still --at` 永远是「不带入场」的循环帧；要拍入场过程用 `--at-time`

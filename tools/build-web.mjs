@@ -37,11 +37,22 @@ if (!s.includes('wmV10TL(')) {
   // 3. markup: interactive-page format
   must('<button data-fmt="zip"><b>ZIP</b><small>素材打包</small></button>', '<button data-fmt="zip"><b>ZIP</b><small>素材打包</small></button>\n      <button data-fmt="html"><b>交互网页</b><small>单文件 · 离线播放</small></button>', 'html fmt');
 }
+// 3b. v10.2 素材比例：spec 字段 + 舞台 / 演示按画面比例留边（未导入图片或 16:9 时与 v10 完全相同）
+if (!s.includes('wmAdSig')) {
+  must('const tplKey = o.id + "|" + wmParamSig(o.id) + (o.tl ? "|" + JSON.stringify(o.tl) : "");',
+    'const tplKey = o.id + "|" + wmParamSig(o.id) + (o.tl ? "|" + JSON.stringify(o.tl) : "") + (o.useStageBg && typeof wmAdSig === "function" ? "|ad:" + wmAdSig() : "");', 'tplKey adapt');
+  must('    if (o.tl) { spec.speed = o.tl.speed; spec.intro = o.tl.intro; if (o.tl.mb) spec.fx = { motionBlur: 6, shutter: 0.5 }; } // v10\n',
+    '    if (o.tl) { spec.speed = o.tl.speed; spec.intro = o.tl.intro; if (o.tl.mb) spec.fx = { motionBlur: 6, shutter: 0.5 }; } // v10\n    if (o.useStageBg && typeof wmAdSpec === "function") Object.assign(spec, wmAdSpec(list)); // v10.2\n', 'spec adapt');
+  must('  const ok = wmSyncEngine(E, { id: selectedId, media: wmMediaList(selectedId), w: pw & ~1, h: ph & ~1, useStageBg: true, fps: ex ? ex.fps : 30, tl });',
+    '  const AB = (!ex && typeof wmAdBox === "function") ? wmAdBox(pw, ph) : null; // v10.2 画面比例跟随素材时留边\n  const ok = wmSyncEngine(E, { id: selectedId, media: wmMediaList(selectedId), w: (AB ? AB[2] : pw) & ~1, h: (AB ? AB[3] : ph) & ~1, useStageBg: true, fps: ex ? ex.fps : 30, tl });', 'sync box');
+  must('  ctx.drawImage(E.canvas, 0, 0, pw, ph);\n  const gridOn',
+    '  if (AB) { ctx.fillStyle = "#020705"; ctx.fillRect(0, 0, pw, ph); ctx.drawImage(E.canvas, AB[0], AB[1], AB[2], AB[3]); ctx.strokeStyle = "rgba(116, 235, 193, .22)"; ctx.lineWidth = 1; ctx.strokeRect(AB[0] + 0.5, AB[1] + 0.5, AB[2] - 1, AB[3] - 1); }\n  else ctx.drawImage(E.canvas, 0, 0, pw, ph);\n  const gridOn', 'draw box');
+}
 // 4. css + player template + add-on (replaced on rebuild)
 s = s.replace(/<style id="wmV10Css">[\s\S]*?<\/style>\n?/, '').replace(/<script type="text\/plain" id="wmPlayerTpl">[\s\S]*?<\/script>\n?/, '').replace(/<script id="wmV10Addon">[\s\S]*?<\/script>\n?/, '');
-const css = fs.readFileSync(path.join(ROOT, 'web/v10-addon.css'), 'utf8') + fs.readFileSync(path.join(ROOT, 'web/v101-audio.css'), 'utf8');
+const css = fs.readFileSync(path.join(ROOT, 'web/v10-addon.css'), 'utf8') + fs.readFileSync(path.join(ROOT, 'web/v101-audio.css'), 'utf8') + fs.readFileSync(path.join(ROOT, 'web/v102-adapt.css'), 'utf8');
 s = s.replace('</head>', () => `<style id="wmV10Css">\n${css}</style>\n</head>`);
-const addon = (fs.readFileSync(path.join(ROOT, 'web/v10-addon.js'), 'utf8') + '\n' + fs.readFileSync(path.join(ROOT, 'web/v101-audio.js'), 'utf8')).replace(/<\/script/gi, '<\\/script');
+const addon = (fs.readFileSync(path.join(ROOT, 'web/v10-addon.js'), 'utf8') + '\n' + fs.readFileSync(path.join(ROOT, 'web/v101-audio.js'), 'utf8') + '\n' + fs.readFileSync(path.join(ROOT, 'web/v102-adapt.js'), 'utf8')).replace(/<\/script/gi, '<\\/script');
 const player = gz64(fs.readFileSync(path.join(ROOT, 'engine/player/player.html')));
 const endEngine = s.indexOf('</script>', s.indexOf('<script id="wmEngineScript">')) + '</script>'.length;
 s = s.slice(0, endEngine) + `\n<script type="text/plain" id="wmPlayerTpl">${player}</script>\n<script id="wmV10Addon">\n${addon}\n</script>` + s.slice(endEngine);
