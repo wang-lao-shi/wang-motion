@@ -5,6 +5,8 @@ import path from 'path';
 import os from 'os';
 import { spawnSync, spawn, execSync } from 'child_process';
 import crypto from 'crypto';
+import zlib from 'zlib';
+globalThis.__wmZlib = zlib;
 import { fileURLToPath, pathToFileURL } from 'url';
 import { normParams } from '../engine/lib.js';
 
@@ -60,12 +62,19 @@ async function findTemplate(id) {
 function findChrome() {
   if (process.env.WM_CHROME && fs.existsSync(process.env.WM_CHROME)) return process.env.WM_CHROME;
   const cands = [];
-  const pw = process.env.PLAYWRIGHT_BROWSERS_PATH || path.join(os.homedir(), '.cache/ms-playwright');
+  const pw = process.env.PLAYWRIGHT_BROWSERS_PATH || (process.platform === 'win32' && process.env.LOCALAPPDATA ? path.join(process.env.LOCALAPPDATA, 'ms-playwright') : path.join(os.homedir(), '.cache/ms-playwright'));
   for (const base of [pw, '/workspace/tools/ms-playwright']) {
     if (!fs.existsSync(base)) continue;
     for (const d of fs.readdirSync(base)) {
       if (d.startsWith('chromium_headless_shell')) cands.push(path.join(base, d, 'chrome-linux/headless_shell'), path.join(base, d, 'chrome-headless-shell-linux64/chrome-headless-shell'));
+      if (process.platform === 'win32' && d.startsWith('chromium_headless_shell')) cands.push(path.join(base, d, 'chrome-headless-shell-win64/chrome-headless-shell.exe'));
       if (d.startsWith('chromium-')) cands.push(path.join(base, d, 'chrome-linux/chrome'), path.join(base, d, 'chrome-linux64/chrome'));
+      if (process.platform === 'win32' && d.startsWith('chromium-')) cands.push(path.join(base, d, 'chrome-win/chrome.exe'), path.join(base, d, 'chrome-win64/chrome.exe'));
+    }
+  }
+  if (process.platform === 'win32') {
+    for (const base of [process.env.PROGRAMFILES, process.env['PROGRAMFILES(X86)'], process.env.LOCALAPPDATA].filter(Boolean)) {
+      cands.push(path.join(base, 'Google/Chrome/Application/chrome.exe'), path.join(base, 'Microsoft/Edge/Application/msedge.exe'));
     }
   }
   cands.push('/usr/bin/chromium', '/usr/bin/chromium-browser', '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome');
@@ -73,7 +82,7 @@ function findChrome() {
 }
 async function getPW() {
   const tries = [path.join(ROOT, 'node_modules/playwright-core/index.mjs'), 'playwright-core', 'playwright'];
-  for (const t of tries) { try { return await import(t.startsWith('/') ? pathToFileURL(t).href : t); } catch { } }
+  for (const t of tries) { try { return await import(path.isAbsolute(t) ? pathToFileURL(t).href : t); } catch { } }
   console.error('playwright-core missing. Run: cd ' + ROOT + ' && npm install'); process.exit(3);
 }
 async function launch() {
@@ -90,8 +99,8 @@ async function openPage(browser, W, H) {
   page.on('console', (m) => { if (m.type() === 'error') console.error('[console]', m.text()); });
   await page.route('http://wm.local/**', async (route) => {
     const u = new URL(route.request().url());
-    let p = decodeURIComponent(u.pathname);
-    const file = p.startsWith('/@fs/') ? p.slice(4) : path.join(ENGINE, p);
+    const p = u.pathname;
+    const file = p.startsWith('/@fs/') ? decodeURIComponent(p.slice(5)) : path.join(ENGINE, decodeURIComponent(p));
     if (!fs.existsSync(file)) return route.fulfill({ status: 404, body: 'nf' });
     const ext = path.extname(file).toLowerCase(); const body = fs.readFileSync(file);
     const range = route.request().headers()['range'];
@@ -105,7 +114,7 @@ async function openPage(browser, W, H) {
   await page.waitForFunction(() => window.WM_READY === true);
   return page;
 }
-const fsUrl = (p) => 'http://wm.local/@fs' + encodeURI(path.resolve(p));
+const fsUrl = (p) => 'http://wm.local/@fs/' + encodeURIComponent(path.resolve(p));
 
 // ---------------- media ----------------
 function collectMedia(a, spec) {
@@ -153,7 +162,7 @@ function demoMedia(n = 12) {
   for (let i = 1; i <= n; i++) spawnSync(im, ['-size', '800x600', `gradient:#${cols[(i - 1) % 12]}-#111111`, '-gravity', 'center', '-fill', 'white', '-pointsize', '260', '-annotate', '0', String(i), '-fill', 'none', '-stroke', 'white', '-strokewidth', '12', '-draw', 'rectangle 20,20 780,580', path.join(dir, `demo${String(i).padStart(2, '0')}.png`)]);
   return demoMedia(n);
 }
-function hasCmd(c) { return spawnSync('sh', ['-c', `command -v ${c}`]).status === 0; }
+function hasCmd(c) { return process.platform === 'win32' ? spawnSync('where.exe', [c], { stdio: 'ignore' }).status === 0 : spawnSync('sh', ['-c', `command -v ${c}`]).status === 0; }
 
 // ---------------- spec ----------------
 function buildSpec(a, tpl, def = {}) {
@@ -181,6 +190,25 @@ function buildSpec(a, tpl, def = {}) {
   spec.fx = { ...(spec.fx || {}) };
   if (a.motionblur) spec.fx.motionBlur = +a.motionblur; if (a.grain) spec.fx.grain = +a.grain; if (a.vignette) spec.fx.vignette = +a.vignette;
   if (a.keyframes) spec.keyframes = JSON.parse(a.keyframes);
+  // v10: speed + intro
+  if (a.speed != null && a.speed !== 'true') {
+    if (a.duration) { console.error('error: --speed and --duration both set. --duration is the loop length at 1x (v9); --speed scales the whole timeline. Use one.'); process.exit(2); }
+    const sp = Number(a.speed); if (!(sp > 0)) { console.error('error: --speed must be > 0 (0.1 .. 8)'); process.exit(2); }
+    if (sp < 0.1 || sp > 8) console.error(`warning: --speed ${sp} clamped to 0.1 .. 8`);
+    spec.speed = Math.min(8, Math.max(0.1, sp));
+  }
+  const iKeys = { 'intro-style': 'style', 'intro-order': 'order', 'intro-dur': 'dur', 'intro-hold': 'hold', 'intro-seed': 'seed', 'intro-phase': 'phase', 'intro-ramp': 'ramp' };
+  const hasI = a.intro || Object.keys(iKeys).some((k) => a[k] != null) || a['no-ramp'] || def.intro;
+  if (hasI) {
+    const base = typeof spec.intro === 'string' ? { mode: spec.intro } : { ...(spec.intro || {}) };
+    if (a.intro) base.mode = a.intro; else if (!base.mode || base.mode === 'none') base.mode = def.intro || base.mode || 'none';
+    for (const [k, f] of Object.entries(iKeys)) if (a[k] != null) base[f] = ['style', 'order'].includes(f) ? a[k] : Number(a[k]);
+    if (a['no-ramp']) base.ramp = 0;
+    if (!['none', 'stagger', 'whole'].includes(base.mode)) { console.error(`error: --intro ${base.mode}: use none | stagger | whole`); process.exit(2); }
+    if (base.style && !['rise', 'fly', 'pop', 'flip'].includes(base.style)) { console.error(`error: --intro-style ${base.style}: use rise | fly | pop | flip`); process.exit(2); }
+    if (base.order && !['index', 'center', 'ltr', 'random'].includes(base.order)) { console.error(`error: --intro-order ${base.order}: use index | center | ltr | random`); process.exit(2); }
+    spec.intro = base;
+  }
   return spec;
 }
 async function initPage(page, spec, tpl, media) {
@@ -193,6 +221,8 @@ async function initPage(page, spec, tpl, media) {
   return r;
 }
 const b64 = (d) => Buffer.from(d.split(',')[1], 'base64');
+const introOn = (spec) => { const i = spec.intro; return !!i && (typeof i === 'string' ? i !== 'none' : (i.mode && i.mode !== 'none')); };
+const usesTimeline = (spec, a) => introOn(spec) || (spec.speed && spec.speed !== 1) || a.loops != null || spec.loops != null;
 
 // ---------------- commands ----------------
 async function cmdList(a) {
@@ -206,15 +236,27 @@ async function cmdList(a) {
 }
 async function cmdInfo(a) {
   const t = await findTemplate(a._[1]);
-  const { layout, setup, camera, ...r } = t; console.log(JSON.stringify(r, null, 1));
+  const { layout, setup, camera, ...r } = t;
+  const { INTRO_COMPAT, START_PHASE } = await import(pathToFileURL(path.join(ENGINE, 'intro.js')).href);
+  const ic = INTRO_COMPAT[t.id];
+  r.intro = ic ? { startPhase: START_PHASE[t.id] ?? 0, visibleCards: ic.v, stagger: ic.ok ? 'ok' : 'fallback: whole fade (fewer than 3 cards on screen)' } : { startPhase: START_PHASE[t.id] ?? 0, stagger: 'unknown (run tools/intro-compat.mjs)' };
+  console.log(JSON.stringify(r, null, 1));
 }
 async function cmdStill(a) {
   const tpl = await findTemplate(a._[1] || (a.spec && JSON.parse(fs.readFileSync(a.spec, 'utf8')).template));
   const spec = buildSpec(a, tpl, { res: 720 }); const media = collectMedia(a, spec);
   const br = await launch(); const page = await openPage(br, spec.width, spec.height);
   await initPage(page, spec, tpl, media);
-  const ts = String(a.at ?? '0.3').split(',').map(Number);
   const out = a.out || `${tpl.id}.png`;
+  if (a['at-time'] != null) { // v10: wall-clock seconds on the timeline (intro + hold + loops, speed applied)
+    const Ts = String(a['at-time']).split(',').map(Number);
+    for (let k = 0; k < Ts.length; k++) {
+      const d = await page.evaluate(([T, f]) => window.WM.frameAt(T, f, 'png'), [Ts[k], spec.fps]);
+      const o = Ts.length > 1 ? out.replace(/(\.\w+)$/, `-${k}$1`) : out; fs.writeFileSync(o, b64(d)); console.log(o);
+    }
+    await br.close(); return;
+  }
+  const ts = String(a.at ?? '0.3').split(',').map(Number);
   for (let k = 0; k < ts.length; k++) {
     const t = ts[k] <= 1 && !a.seconds ? ts[k] * spec.duration : ts[k];
     const d = await page.evaluate(([t, f]) => window.WM.frame(t, f, 'png'), [t, spec.fps]);
@@ -232,16 +274,28 @@ async function cmdSheet(a) {
   if (a.category) tpls = tpls.filter((t) => t.category === a.category);
   if (!tpls.length) { console.error(`no templates match${a.category ? ` category "${a.category}"` : ''}. Try: wm list`); process.exit(2); }
   if (!ids.length) console.error(`note: no ids given — sheet of ${tpls.length} templates${a.category ? ` in "${a.category}"` : ''} (pass ids or --category to narrow)`);
-  const frames = Number(a.frames || 1);
+  const iFr = a['intro-frames'] != null ? Number(a['intro-frames']) || 6 : 0; // v10: frames across intro + hold + first beat of the loop
+  const frames = iFr || Number(a.frames || 1);
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wm-sheet-'));
   const br = await launch();
   const specFile = a.spec ? JSON.parse(fs.readFileSync(a.spec, 'utf8')) : {};
   const res = Number(a.res || specFile.res || 360);
   let page; const files = [];
   for (const tpl of tpls) {
-    const spec = buildSpec(a, tpl, { res, ratio: '1:1' }); const media = collectMedia(a, spec);
+    const spec = buildSpec(a, tpl, { res, ratio: '1:1', intro: iFr ? 'stagger' : undefined }); const media = collectMedia(a, spec);
     page = await openPage(br, spec.width, spec.height);
     await initPage(page, spec, tpl, media);
+    if (iFr) {
+      const tl = await page.evaluate(() => window.WM.timeline());
+      const span = tl.introWall + Math.min(0.6, tl.loopWall * 0.1) / 1; // last frame = a moment into the loop (join check)
+      for (let k = 0; k < iFr; k++) {
+        const T = iFr === 1 ? span : (k / (iFr - 1)) * span;
+        const d = await page.evaluate(([T, f]) => window.WM.frameAt(T, f, 'jpeg', 0.9), [T, spec.fps]);
+        const f = path.join(tmp, `${String(files.length).padStart(4, '0')}.jpg`); fs.writeFileSync(f, b64(d));
+        files.push({ f, label: `${tpl.id} ${T.toFixed(2)}s` });
+      }
+      await page.close(); process.stderr.write('.'); continue;
+    }
     for (let k = 0; k < frames; k++) {
       const u = frames === 1 ? Number(a.at ?? 0.3) : k / frames;
       const d = await page.evaluate(([t, f]) => window.WM.frame(t, f, 'jpeg', 0.9), [u * spec.duration, spec.fps]);
@@ -262,23 +316,83 @@ async function cmdSheet(a) {
   fs.rmSync(tmp, { recursive: true, force: true });
   console.log('\n' + (a.out || 'sheet.jpg'));
 }
+
+// v10.1: background music (same rules as the web app and the player): music runs on the wall clock from intro 0 s,
+// speed never changes it; video length is set by the animation (music loops if short, cut + fade-out if long) unless fit.
+const isUrl = (x) => /^https?:\/\//i.test(String(x || ''));
+const AUDIO_MIME = { '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.aac': 'audio/aac', '.mp4': 'audio/mp4', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.oga': 'audio/ogg', '.opus': 'audio/ogg', '.flac': 'audio/flac', '.webm': 'audio/webm' };
+function audioSpec(a, spec) {
+  const base = typeof spec.audio === 'string' ? { src: spec.audio } : { ...(spec.audio || {}) };
+  if (a.audio && a.audio !== true) base.src = a.audio;
+  if (!base.src || a['no-audio']) return null;
+  const au = { volume: 1, offset: 0, fadeIn: 0.5, fadeOut: 1, loop: true, fit: false, ...base };
+  const num = (k, f) => { if (a[k] != null) { const v = Number(a[k]); if (!isFinite(v)) { console.error(`error: --${k} must be a number`); process.exit(2); } au[f] = v; } };
+  num('audio-volume', 'volume'); num('audio-offset', 'offset'); num('audio-fade-in', 'fadeIn'); num('audio-fade-out', 'fadeOut');
+  if (a['no-audio-loop']) au.loop = false;
+  if (a['audio-fit']) au.fit = a['audio-fit'] !== 'false';
+  if (a['audio-link']) au.link = true;
+  au.volume = Math.min(1, Math.max(0, +au.volume)); au.offset = Math.max(0, +au.offset); au.fadeIn = Math.max(0, +au.fadeIn); au.fadeOut = Math.max(0, +au.fadeOut);
+  if (!isUrl(au.src)) {
+    const rel = a.spec && !path.isAbsolute(au.src) ? path.resolve(path.dirname(a.spec), au.src) : null;
+    au.src = rel && fs.existsSync(rel) ? rel : path.resolve(au.src);
+    if (!fs.existsSync(au.src)) { console.error(`error: audio file not found: ${au.src}`); process.exit(2); }
+  }
+  au.name = au.name || decodeURIComponent(path.basename(String(au.src).split('?')[0])) || 'music';
+  return au;
+}
+function audioLength(ff, src) {
+  const r = spawnSync(ff, ['-hide_banner', '-i', src], { encoding: 'utf8' });
+  const m = /Duration:\s*(\d+):(\d+):([\d.]+)/.exec(r.stderr || '');
+  return m ? +m[1] * 3600 + +m[2] * 60 + +m[3] : 0;
+}
+// ffmpeg pieces: extra input + filter/map/codec, trimmed to exactly D seconds
+function audioArgs(au, D, codec) {
+  const inp = [...(au.loop ? ['-stream_loop', '-1'] : []), '-i', au.src];
+  const f = [`atrim=start=${au.offset.toFixed(3)}`, 'asetpts=PTS-STARTPTS', 'aresample=48000', `volume=${au.volume}`];
+  if (au.fadeIn > 0) f.push(`afade=t=in:st=0:d=${Math.min(au.fadeIn, D).toFixed(3)}`);
+  if (au.fadeOut > 0) f.push(`afade=t=out:st=${Math.max(0, D - au.fadeOut).toFixed(3)}:d=${Math.min(au.fadeOut, D).toFixed(3)}`);
+  f.push('apad');
+  const out = ['-filter_complex', `[1:a]${f.join(',')}[wma]`, '-map', '0:v', '-map', '[wma]', '-c:a', codec, '-b:a', codec === 'aac' ? '192k' : '160k', '-t', D.toFixed(3)];
+  return { inp, out };
+}
 async function cmdRender(a) {
   const tpl = await findTemplate(a._[1] || JSON.parse(fs.readFileSync(a.spec, 'utf8')).template);
   const ff = findFfmpeg(); // fail before spending time on frames
   const spec = buildSpec(a, tpl); const media = collectMedia(a, spec);
-  const fps = spec.fps; const from = Number(a.from || 0); const N = Math.round((a.length ? Number(a.length) : spec.duration) * fps);
+  const fps = spec.fps; const from = Number(a.from || 0);
+  const TL = usesTimeline(spec, a); // v10: intro + hold + N loops on the wall clock; otherwise the v9 path (pixel identical)
+  let N = Math.round((a.length ? Number(a.length) : spec.duration) * fps);
+  let tlInfo = null;
+  if (TL) {
+    const sp = spec.speed || 1; const loops = a.loops != null ? Math.max(0, Number(a.loops)) : spec.loops != null ? Math.max(0, Number(spec.loops)) : 1;
+    // timeline lengths (mirror of engine/intro.js timelineInfo, so the frame count is known before the page opens)
+    const { timelineInfo } = await import(pathToFileURL(path.join(ENGINE, 'intro.js')).href);
+    tlInfo = timelineInfo(spec, spec.duration, tpl.id);
+    N = Math.round((a.length ? Number(a.length) : spec.length ? Number(spec.length) : tlInfo.total(loops)) * fps);
+    if (sp >= 4 && !(spec.fx && spec.fx.motionBlur > 1)) console.error(`tip: speed ${sp}x — consider --motionblur 6 for smooth motion`);
+  }
+  const au = audioSpec(a, spec);
+  if (au && au.fit) { // video length follows the music: whole loops that cover it
+    const L = audioLength(ff, au.src) - au.offset;
+    if (a.length) console.error('note: --length set, --audio-fit ignored');
+    else if (!(L > 0)) console.error('warning: could not read the music length (or offset past its end); --audio-fit ignored');
+    else if (TL) { const k = Math.max(1, Math.ceil((L - tlInfo.preWall) / tlInfo.loopWall - 1e-6)); N = Math.round((tlInfo.preWall + k * tlInfo.loopWall) * fps); console.error(`audio-fit: music ${L.toFixed(2)}s -> ${k} loop(s)`); }
+    else { const k = Math.max(1, Math.ceil(L / spec.duration - 1e-6)); N = Math.round(k * spec.duration * fps); console.error(`audio-fit: music ${L.toFixed(2)}s -> ${k} loop(s)`); }
+  }
   const out = path.resolve(a.out || `${tpl.id}.mp4`);
   const fmt = (a.format || path.extname(out).slice(1) || 'mp4').toLowerCase();
   const workers = Math.max(1, Number(a.workers || Math.min(4, os.cpus().length)));
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wm-render-'));
   const t0 = Date.now();
-  console.error(`render ${tpl.id} ${spec.width}x${spec.height} ${spec.duration}s @${fps}fps = ${N} frames, ${workers} workers`);
+  console.error(TL ? `render ${tpl.id} ${spec.width}x${spec.height} ${(N / fps).toFixed(2)}s (speed ${spec.speed || 1}x, intro ${introOn(spec) ? spec.intro.mode : 'none'} ${tlInfo.introWall.toFixed(2)}s, loop ${tlInfo.loopWall.toFixed(2)}s) @${fps}fps = ${N} frames, ${workers} workers`
+    : `render ${tpl.id} ${spec.width}x${spec.height} ${spec.duration}s @${fps}fps = ${N} frames, ${workers} workers`);
   const br = await launch();
   let done = 0;
   await Promise.all(Array.from({ length: workers }, async (_, w) => {
     const page = await openPage(br, spec.width, spec.height); await initPage(page, spec, tpl, media);
     for (let i = w; i < N; i += workers) {
-      const d = await page.evaluate(([t, f]) => window.WM.frame(t, f, 'jpeg', 0.95), [from + i / fps, fps]);
+      const d = TL ? await page.evaluate(([T, f]) => window.WM.frameAt(T, f, 'jpeg', 0.95), [from + i / fps, fps])
+        : await page.evaluate(([t, f]) => window.WM.frame(t, f, 'jpeg', 0.95), [from + i / fps, fps]);
       fs.writeFileSync(path.join(tmp, `f${String(i).padStart(6, '0')}.jpg`), b64(d));
       done++; if (done % 15 === 0) process.stderr.write(`\r${done}/${N}`);
     }
@@ -287,15 +401,108 @@ async function cmdRender(a) {
   await br.close();
   process.stderr.write(`\rframes done in ${((Date.now() - t0) / 1000).toFixed(1)}s\n`);
   const inp = ['-y', '-framerate', String(fps), '-i', path.join(tmp, 'f%06d.jpg')];
-  const audio = a.audio ? ['-i', a.audio, '-shortest', '-c:a', 'aac', '-b:a', '192k'] : [];
+  const Dv = N / fps;
+  const A = au && fmt !== 'gif' ? audioArgs(au, Dv, fmt === 'webm' ? 'libopus' : 'aac') : { inp: [], out: [] };
+  if (au && fmt === 'gif') console.error('note: GIF has no sound; music ignored');
+  const audio = [...A.inp, ...A.out];
   let args;
-  if (fmt === 'webm') args = [...inp, ...audio.slice(0, 2), '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '28', '-row-mt', '1', ...(a.audio ? ['-shortest', '-c:a', 'libopus'] : []), out];
-  else if (fmt === 'gif') args = [...inp, '-vf', `fps=${Math.min(fps, 20)},scale=${Math.min(spec.width, 720)}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`, out];
+  if (fmt === 'webm') args = [...inp, ...audio, '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '28', '-row-mt', '1', out];
+  else if (fmt === 'gif') args = [...inp, ...(a['gif-once'] ? ['-loop', '-1'] : []), '-vf', `fps=${Math.min(fps, 20)},scale=${Math.min(spec.width, 720)}:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse`, out];
   else args = [...inp, ...audio, '-c:v', 'libx264', '-preset', a.preset || 'medium', '-crf', String(a.crf || 16), '-vf', 'scale=out_range=tv', '-pix_fmt', 'yuv420p', '-color_range', 'tv', '-movflags', '+faststart', out];
   const r = spawnSync(ff, args, { stdio: ['ignore', 'ignore', 'pipe'] });
   if (r.status !== 0) { console.error(r.stderr.toString().slice(-2000)); process.exit(1); }
   fs.rmSync(tmp, { recursive: true, force: true });
   console.log(out);
+}
+// v10: single-file interactive web page (offline). Player template + engine bundle live in engine/player/.
+async function cmdHtml(a) {
+  const tpl = await findTemplate(a._[1] || (a.spec && JSON.parse(fs.readFileSync(a.spec, 'utf8')).template));
+  const sp = a.spec ? JSON.parse(fs.readFileSync(a.spec, 'utf8')) : {};
+  const spec = buildSpec(a, tpl, { res: 1080 });
+  const media = collectMedia(a, spec).filter((f) => { if (/\.(mp4|webm|mov|m4v|mkv)$/i.test(f)) { console.error(`note: ${path.basename(f)} skipped (the HTML player embeds images only)`); return false; } return true; });
+  const pl = { controls: true, autoplay: true, imgMax: 1600, allBatches: false, ...(sp.player || {}) };
+  if (a.controls != null) pl.controls = a.controls !== 'false';
+  if (a['no-controls']) pl.controls = false;
+  if (a.autoplay != null) pl.autoplay = a.autoplay !== 'false';
+  if (a['click-to-play']) pl.autoplay = false;
+  if (a['all-batches']) pl.allBatches = a['all-batches'] !== 'false';
+  if (a['img-max'] != null) pl.imgMax = a['img-max'] === 'orig' || a['img-max'] === 'original' ? 'orig' : Number(a['img-max']);
+  const imode = introOn(spec) ? spec.intro.mode : (a.intro === 'none' || (sp.intro && (sp.intro === 'none' || sp.intro.mode === 'none') && !a.intro) ? 'none' : 'stagger');
+  const intro = { ...(typeof spec.intro === 'object' ? spec.intro : {}), mode: imode };
+  // batches: --batch-size N splits the media like the web app (last batch back-filled); default one batch = all media
+  const bs = Number(a['batch-size'] || sp.batchSize || 0);
+  let batches = [media];
+  if (bs > 0 && media.length > bs) { batches = []; for (let st = 0; st < media.length; st += bs) { const s0 = Math.min(st, media.length - bs); batches.push(media.slice(s0, s0 + bs)); } }
+  const bi = Math.min(Number(a.batch || 0), batches.length - 1);
+  const keep = pl.allBatches ? batches : [batches[bi]];
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wm-html-'));
+  const im = hasCmd('magick') ? 'magick' : 'convert';
+  const cache = new Map();
+  const enc = (f) => {
+    if (cache.has(f)) return cache.get(f);
+    const ext = path.extname(f).toLowerCase(); let buf, mime;
+    const alpha = ext === '.png' && /a/.test(spawnSync(hasCmd('magick') ? 'magick' : 'identify', [...(hasCmd('magick') ? ['identify'] : []), '-format', '%[channels]', f]).stdout?.toString() || '');
+    if (ext === '.svg' || ext === '.gif' || pl.imgMax === 'orig') { buf = fs.readFileSync(f); mime = { '.svg': 'image/svg+xml', '.gif': 'image/gif', '.png': 'image/png', '.webp': 'image/webp' }[ext] || 'image/jpeg'; }
+    else {
+      const o = path.join(tmp, cache.size + (alpha ? '.png' : '.jpg'));
+      const r = spawnSync(im, [f, '-auto-orient', '-resize', `${pl.imgMax}x${pl.imgMax}>`, ...(alpha ? [] : ['-quality', '86', '-strip']), o]);
+      if (r.status !== 0) { buf = fs.readFileSync(f); mime = 'image/' + (ext.slice(1).replace('jpg', 'jpeg') || 'png'); } else { buf = fs.readFileSync(o); mime = alpha ? 'image/png' : 'image/jpeg'; }
+    }
+    const d = `data:${mime};base64,${buf.toString('base64')}`; cache.set(f, d); return d;
+  };
+  const B = keep.map((b) => b.map(enc));
+  let bgImage = null; const bg = spec.background ? { ...spec.background } : undefined;
+  if (bg && bg.type === 'image' && bg.image) { bgImage = enc(path.resolve(bg.image)); delete bg.image; }
+  const { width, height, media: _m, ratio, res, template, player, intro: _i, speed: _s, audio: _au, ...rest } = spec;
+  // v10.1 music: embedded as a data URL (works offline); --audio-link keeps a URL as a link (smaller, needs network)
+  const au = audioSpec(a, spec); let audio = null;
+  if (au) {
+    let src = au.src;
+    if (!(isUrl(src) && au.link)) {
+      try {
+        let buf, mime;
+        if (isUrl(src)) { const r = await fetch(src); if (!r.ok) throw new Error('HTTP ' + r.status); buf = Buffer.from(await r.arrayBuffer()); mime = (r.headers.get('content-type') || '').split(';')[0]; }
+        else buf = fs.readFileSync(src);
+        if (!mime || !mime.startsWith('audio/')) mime = AUDIO_MIME[path.extname(String(src).split('?')[0]).toLowerCase()] || 'audio/mpeg';
+        src = `data:${mime};base64,${buf.toString('base64')}`;
+      } catch (e) { if (!isUrl(src)) throw e; console.error(`warning: could not download the music (${e.message}); linking the URL instead (needs network)`); }
+    }
+    audio = { src, name: au.name, volume: au.volume, offset: au.offset, fadeIn: au.fadeIn, fadeOut: au.fadeOut, loop: au.loop };
+  }
+  const data = { v: 10, template: tpl.id, title: tpl.name, aspect: width / height, spec: { ...rest, background: bg }, speed: spec.speed || 1, intro, player: { ...pl, defaultIntro: imode }, batches: B, batch: pl.allBatches ? bi : 0, bgImage, audio };
+  const bundle = path.join(ENGINE, 'player/wm-engine.min.js');
+  if (!fs.existsSync(bundle)) { console.error('error: engine/player/wm-engine.min.js missing — run: node tools/build-bundle.mjs'); process.exit(3); }
+  const out = path.resolve(a.out || `${tpl.id}.html`);
+  const html = buildPlayerHtml(fs.readFileSync(path.join(ENGINE, 'player/player.html'), 'utf8'), fs.readFileSync(bundle), data);
+  fs.writeFileSync(out, html); fs.rmSync(tmp, { recursive: true, force: true });
+  console.error(`html ${tpl.id}: ${B.reduce((n, b) => n + b.length, 0)} images in ${B.length} batch(es), intro ${imode}, speed ${data.speed}x${audio ? `, music ${audio.src.startsWith('data:') ? 'embedded' : 'linked'}` : ''}, ${(html.length / 1048576).toFixed(2)} MB`);
+  console.log(out);
+}
+function buildPlayerHtml(tplHtml, bundleBuf, data) {
+  const zlib = globalThis.__wmZlib;
+  const gz = zlib.gzipSync(bundleBuf, { level: 9 }).toString('base64');
+  const loader = `<script>/*! wang-motion engine (skill v10) + three.js | MIT */(async()=>{const S="${gz}";const b=Uint8Array.from(atob(S),c=>c.charCodeAt(0));const t=await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("gzip"))).text();const el=document.createElement("script");el.textContent=t;document.head.appendChild(el);window.dispatchEvent(new Event("wmx-ready"));})();</script>`;
+  const json = JSON.stringify(data).replace(/</g, '\\u003c');
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  return tplHtml.split('{{TITLE}}').join(esc(data.title + ' · WANG MOTION')).replace('{{DATA}}', () => json).replace('<!--WM_ENGINE-->', () => loader);
+}
+// maintenance: probe every template's intro start pose -> engine/intro-compat.js (read by wm info, the web app and the player)
+async function cmdIntroCompat(a) {
+  const all = await loadTemplates(); const br = await launch(); const out = {};
+  const { START_PHASE } = await import(pathToFileURL(path.join(ENGINE, 'intro.js')).href);
+  for (const tpl of all) {
+    const spec = buildSpec({ ...a, intro: 'stagger' }, tpl, { res: 240, ratio: '16:9' }); const media = collectMedia(a, spec);
+    const page = await openPage(br, spec.width, spec.height); await initPage(page, spec, tpl, media);
+    const v = await page.evaluate((t) => window.WM.visible(t), (START_PHASE[tpl.id] ?? 0) * spec.duration);
+    out[tpl.id] = { v, ok: v >= 3 };
+    if (v < 3 && a.scan) { const sc = []; for (let k = 0; k < 20; k++) sc.push(await page.evaluate((t) => window.WM.visible(t), (k / 20) * spec.duration)); out[tpl.id].scan = sc; }
+    await page.close(); process.stderr.write(v >= 3 ? '.' : 'x');
+  }
+  await br.close();
+  const f = path.join(ENGINE, 'intro-compat.js');
+  fs.writeFileSync(f, `// generated by \`wm intro-compat\` — visible cards at the intro start pose per template; ok=false -> stagger falls back to a whole fade\nexport default ${JSON.stringify(out)};\n`);
+  const bad = Object.entries(out).filter(([, x]) => !x.ok).map(([k, x]) => `${k}(${x.v}${x.scan ? ' scan ' + x.scan.join(',') : ''})`);
+  console.log(`\n${f}\n${all.length - bad.length} ok, ${bad.length} fallback: ${bad.join(', ')}`);
 }
 function findFfmpeg() { if (hasCmd('ffmpeg')) return 'ffmpeg'; console.error('error: ffmpeg not found on PATH (needed to encode video). Install ffmpeg, or use `wm still` / `wm sheet`.'); process.exit(4); }
 async function cmdDoctor() {
@@ -320,9 +527,16 @@ const HELP = `wang-motion (wm) — card-motion showcase renderer
             [--param key=value ...] [--spec spec.json] [--out out.mp4|.webm|.gif] [--audio a.mp3]
             [--bg #111 | --gradient #a,#b[,#c] --angle 90 | --bg-image p] [--text "Title"] [--logo p]
             [--motionblur 6] [--grain 0.3] [--vignette 0.4] [--card-ratio 4:3] [--count 24]
+  v10  --speed 0.5 (0.1..8, whole timeline)  --intro none|stagger|whole  --intro-style rise|fly|pop|flip
+       --intro-order index|center|ltr|random  --intro-dur 2.5 --intro-hold 0.3 --intro-seed 1 [--intro-phase p] [--no-ramp]
+       render --loops N (intro + hold + N loops) [--length s] [--gif-once]   still --at-time 1.2   sheet --intro-frames 6
+  wm html <id> [options] [--controls false] [--autoplay false] [--all-batches --batch-size N] [--img-max 1024|1600|orig] --out x.html
+  v10.1 music (render + html): --audio a.mp3|https://…  --audio-volume 0..1 (1)  --audio-offset s (0)  --audio-fade-in s (0.5)
+       --audio-fade-out s (1, render)  --no-audio-loop  --audio-fit (render: whole loops that cover the music)  --audio-link (html: keep URL, don't embed)
+  wm intro-compat                       regenerate engine/intro-compat.js (visible cards at the intro start pose)
   wm doctor                             environment check`;
 const a = parseArgs(process.argv.slice(2));
 const cmd = a._[0];
-const T = { list: cmdList, info: cmdInfo, still: cmdStill, sheet: cmdSheet, render: cmdRender, doctor: cmdDoctor };
+const T = { list: cmdList, info: cmdInfo, still: cmdStill, sheet: cmdSheet, render: cmdRender, html: cmdHtml, 'intro-compat': cmdIntroCompat, doctor: cmdDoctor };
 if (!T[cmd]) { console.log(HELP); process.exit(cmd ? 1 : 0); }
 await T[cmd](a);

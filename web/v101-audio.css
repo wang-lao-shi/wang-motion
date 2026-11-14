@@ -1,0 +1,31 @@
+/* ===== WANG MOTION v10.1: 背景音乐 ===== */
+.wma-tool { gap: 6px !important; }
+.wma-tool svg { opacity: .8; }
+.wma-tool.on { color: var(--wm-mint, #74EBC1) !important; border-color: rgba(116, 235, 193, .45) !important; }
+.wma-pop { width: 340px; }
+.wma-pop .hd b { font-size: 15px; }
+.wma-pop .wma-body { margin-top: 10px; }
+.wma-panel { display: flex; flex-direction: column; gap: 10px; font: 500 12px var(--wm-font, sans-serif); color: #F5F7F3; }
+.wma-src { display: flex; flex-direction: column; gap: 8px; }
+.wma-btn { height: 30px; padding: 0 11px; border-radius: 8px; border: 1px solid rgba(120, 211, 169, .25); background: rgba(16, 37, 29, .55); color: rgba(245, 247, 243, .9); font: 650 12px var(--wm-font, sans-serif); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.wma-btn:hover { border-color: rgba(116, 235, 193, .55); color: #fff; }
+.wma-btn.on { color: #A9F7D9; }
+.wma-up { align-self: flex-start; }
+.wma-url { display: flex; gap: 6px; }
+.wma-url input { flex: 1; min-width: 0; height: 30px; border-radius: 8px; border: 1px solid rgba(120, 211, 169, .25); background: rgba(5, 15, 11, .6); color: #F5F7F3; padding: 0 9px; font: 500 12px var(--wm-font, sans-serif); }
+.wma-cur { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(16, 37, 29, .45); border: 1px solid rgba(120, 211, 169, .14); }
+.wma-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 650; }
+.wma-len { color: #F5D5AF; font: 650 12px var(--font-mono, monospace); }
+.wma-err { color: #E6A36E; line-height: 1.5; }
+.wma-grid { display: grid; grid-template-columns: 64px 1fr; gap: 9px 12px; align-items: center; }
+.wma-grid > span { color: var(--wm-text-3, #9ab); }
+.wma-grid .rng { display: flex; align-items: center; gap: 10px; }
+.wma-grid .rng input[type=range] { flex: 1; accent-color: #74EBC1; margin: 0; }
+.wma-grid .rng b { min-width: 46px; text-align: right; font: 650 12px var(--font-mono, monospace); color: #F5D5AF; }
+.wma-checks { display: flex; flex-direction: column; gap: 6px; }
+.wma-checks label { display: flex; align-items: center; gap: 6px; color: rgba(245, 247, 243, .85); cursor: pointer; }
+.wma-checks input { accent-color: #74EBC1; }
+.wma-hint { font-size: 12px; color: #E6A36E; line-height: 1.5; }
+.wma-hint:empty { display: none; }
+#wmExAudioRow .wma-host { margin-top: 2px; }
+#wmExAudioRow.dim .wma-grid, #wmExAudioRow.dim .wma-src { opacity: .45; }

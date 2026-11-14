@@ -1,0 +1,8 @@
+{
+  "template": "cover-flow",
+  "ratio": "16:9", "res": 1080,
+  "speed": 0.75,
+  "intro": { "mode": "stagger", "style": "fly", "order": "ltr", "dur": 2.4, "hold": 0.4 },
+  "player": { "controls": true, "autoplay": true, "imgMax": 1600, "allBatches": false },
+  "background": { "type": "gradient", "colors": ["#0f2027", "#2c5364"], "angle": 90 }
+}

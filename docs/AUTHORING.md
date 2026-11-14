@@ -5,7 +5,7 @@ It is a **pure function of time**: `layout(ctx)` returns the state of every card
 The engine (Three.js) does rendering, cover-fit, rounded corners, shadows, back-faces, sorting,
 background, text/logo overlays, keyframes, motion blur, grain, and export. Templates must NOT import three.js
 (they are imported by Node for `wm list`). Import only `../_common.js` and `../../lib.js` (or a sibling template module in the same category to reuse its exported helper, e.g. `wall()` from sphere-wall.js).
-_common.js also has: `P.cardRatio()`, `cardAR(ctx, defaultAspect)` (per-template shape for 'auto'), `EASINGS`/`easeOf(name)` (built-in easing menu), `latticeMedia()` (seamless media pattern for scrolling lattices), `curvePoint()` (flat lattice → concave/convex sphere or cylinder), and 3×3 rotation helpers `mRx/mRy/mRz/mMul/mApply/eulerYXZ`.
+_common.js also has: `P.cardRatio()`, `cardAR(ctx, defaultAspect)` (per-template shape for 'auto'), `EASINGS`/`easeOf(name)` (animos easing menu), `latticeMedia()` (seamless media pattern for scrolling lattices), `curvePoint()` (flat lattice → concave/convex sphere or cylinder), and 3×3 rotation helpers `mRx/mRy/mRz/mMul/mApply/eulerYXZ`.
 
 ```js
 import { base, P, rotX, rotY, rotZ, fit, sizeH, sizeW, backFade } from '../_common.js';
@@ -15,7 +15,7 @@ export default {
   slots: 12,                    // suggested media count
   desc: 'one line: what it looks like',
   tags: ['carousel', 'apple', 'product'],
-  ref: 'standard' | 'original',  // template category reference
+  ref: 'animos' | 'original',  // animos = replica, original = wang-motion extension
   params: base({               // base() adds padding + cornerRadius
     cardSize: P.pct('Card size', 37, 5, 100),
     perspective: P.perspective(55),
@@ -60,7 +60,7 @@ Camera: perspective camera looking at origin from +z; `perspective` % → fov = 
 | uv | [u0,v0,u1,v1] sub-rect of the media (tiles, mosaics, slices) ; fullAspect = aspect of the whole virtual image when tiling |
 | zoom, panX, panY | Ken-Burns inside the card |
 | mask | {type:'line', angle(rad), p:0..1 progress, soft} / {type:'circle', cx, cy, r, soft} / {type:'rect', rect:[x0,y0,x1,y1], soft} (card uv space, line keeps the side with proj<p) |
-| mirrorBack | true (default: back shows image mirrored) / false (dark back) / 'unmirror' |
+| mirrorBack | true (default: back shows image mirrored, like animos) / false (dark back) / 'unmirror' |
 | border, borderColor | inner border (fraction of min side) |
 | sheen, rim, blur (mip bias 0..6), shadow (opacity override, 0 = none) |
 | edgeX, edgeTop, edgeBottom, edgeW | thin white highlight lines on the left+right / top (slightly inset) / bottom edges, strength 0..1, width in world units (default 0.004); template-level defaults allowed (`edgeX: 0.8` on the template object) |
@@ -76,12 +76,15 @@ Camera: perspective camera looking at origin from +z; `perspective` % → fov = 
 4. Expose the reference's parameters with the same defaults (names camelCase). Add useful extras.
 5. Keep cards ≤ ~300 per frame.
 
-## Motion Tuning & Testing Workflow
-- Reference frames: evaluate 8 phases at u = 0, .125, ... .875 (16s loop, 1:1 frame, default settings). Verify motion fluidity, layout geometry, depth hierarchy, and loop transition.
-- Render check: `node bin/wm.mjs still <id> --ratio 9:16 --res 480 --at 0.4 --out /tmp/x.png` to verify multiple aspect ratios (16:9, 9:16, 1:1).
+## Replica workflow (for animos replicas)
+Reference frames and compare.sh are optional external materials and are not included in this repository.
+- Reference frames: `<reference-dir>/ref/templates/<NN>-<slug>-f0..f7.jpg` are 8 frames at u = 0, .125, ... .875 (16s loop, 1:1 frame, default settings). NOTE f0 may show a half-loaded grey image — ignore it. The media in the reference are 12 numbered images (some templates only show 1..8 — compare MOTION, layout, depth, timing; not exact labels). `<NN>-<slug>.json` has the property panel text (param labels + default values; for choice params the selected value is not marked — infer from the frames).
+- Compare: `<reference-dir>/compare.sh <NN> <id> [--param k=v]` → `<reference-dir>/cmp/<NN>.jpg` (top row reference, bottom row yours, same phases). Read it with read_file and iterate until it matches.
+- Render check: `node bin/wm.mjs still <id> --ratio 9:16 --res 480 --at 0.4 --out x.png` to verify other ratios.
+- Start with stills at ≤400px; render full videos after confirming the result.
 
-## Corner radius
-Engine default: radius = min(card-relative `cornerRadius% × min(w,h) × 3.2`, frame-relative `cornerRadius% × 0.8 × frame short side`). Setting `c.radius` or `c.radiusMul` bypasses the cap (see reveal-wipe/_frame.js `frameRadiusMul`).
+## Corner radius (2026-11-04)
+Engine default: radius = min(card-relative `cornerRadius% × min(w,h) × 3.2`, frame-relative `cornerRadius% × 0.8 × frame short side`). This matches animos (≈2.2–2.6% of the frame short side at 3%, measured on 932px reference frames: ~20–26px regardless of card size) for large cards while small cards keep the card-relative value. Setting `c.radius` or `c.radiusMul` bypasses the cap (see reveal-wipe/_frame.js `frameRadiusMul`).
 Templates whose cards zoom (camera dives, hero zooms) should set `radiusMode: 'card'` on the template object so the radius scales with the card (all multiscene templates do). Reference behaviour: static large cards ≈2.2–2.6% of frame; zoomed cards' corners grow with the zoom.
 
 ## X0 — colour / text / list params + title (2026-11-04, phase 4)

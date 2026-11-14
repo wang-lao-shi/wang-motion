@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{TITLE}}</title>
+<meta name="generator" content="wang-motion v10.1 player">
+<style>
+html,body{margin:0;height:100%;background:#050807;overflow:hidden;font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;color:#e8f3ee;-webkit-user-select:none;user-select:none}
+#wmStage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#050807}
+#wmCv{display:block}
+.wmp-ui{position:fixed;right:16px;bottom:16px;display:flex;align-items:center;gap:6px;padding:6px;border-radius:14px;background:rgba(10,18,15,.62);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(169,247,217,.14);box-shadow:0 8px 30px rgba(0,0,0,.35);transition:opacity .35s,transform .35s;z-index:5}
+.wmp-ui.idle{opacity:0;transform:translateY(8px);pointer-events:none}
+body.wmp-noctl .wmp-ui{display:none}
+.wmp-b{width:34px;height:34px;border:0;border-radius:10px;background:transparent;color:#d9efe6;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;position:relative;padding:0}
+.wmp-b:hover{background:rgba(169,247,217,.12);color:#fff}
+.wmp-b.on{background:rgba(116,235,193,.18);color:#a9f7d9}
+.wmp-b svg{width:18px;height:18px}
+.wmp-b[data-tip]:hover::after{content:attr(data-tip);position:absolute;bottom:42px;right:0;white-space:nowrap;background:rgba(6,12,10,.92);border:1px solid rgba(169,247,217,.18);padding:4px 8px;border-radius:7px;font-size:12px;color:#d9efe6;pointer-events:none}
+.wmp-sep{width:1px;height:20px;background:rgba(169,247,217,.16);margin:0 2px}
+.wmp-seek{position:relative;width:170px;height:34px;display:flex;align-items:center;cursor:pointer}
+.wmp-track{position:relative;flex:1;height:4px;border-radius:3px;background:rgba(169,247,217,.16);overflow:hidden}
+.wmp-intro{position:absolute;left:0;top:0;bottom:0;background:rgba(230,163,110,.38)}
+.wmp-fill{position:absolute;left:0;top:0;bottom:0;background:#74ebc1}
+.wmp-knob{position:absolute;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:50%;background:#e8fff6;box-shadow:0 0 0 3px rgba(116,235,193,.25)}
+.wmp-spd{min-width:44px;width:auto;padding:0 8px;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums}
+.wmp-pop{position:absolute;right:0;bottom:46px;padding:12px;border-radius:12px;background:rgba(8,15,12,.95);border:1px solid rgba(169,247,217,.16);box-shadow:0 10px 30px rgba(0,0,0,.4);display:none;width:250px}
+.wmp-pop.open{display:block}
+.wmp-pop .row{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.wmp-pop .chip{border:1px solid rgba(169,247,217,.18);background:transparent;color:#d9efe6;border-radius:7px;padding:3px 7px;font-size:12px;cursor:pointer}
+.wmp-pop .chip.on{background:rgba(116,235,193,.2);border-color:rgba(116,235,193,.5);color:#fff}
+.wmp-pop input[type=range]{width:100%;accent-color:#74ebc1}
+.wmp-pop .hd{display:flex;justify-content:space-between;font-size:12px;color:#a9cfc0}
+.wmp-pop .hd b{color:#fff;font-size:14px}
+.wmp-batch{font-size:12px;min-width:38px;font-variant-numeric:tabular-nums}
+#wmBig{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.25);cursor:pointer;z-index:6}
+#wmBig.show{display:flex}
+#wmBig i{width:84px;height:84px;border-radius:50%;background:rgba(10,18,15,.7);border:1px solid rgba(169,247,217,.3);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(10px)}
+#wmBig svg{width:34px;height:34px;margin-left:5px;color:#e8fff6}
+#wmMsg{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);color:#a9cfc0;font-size:13px}
+#wmToast{position:fixed;left:50%;top:22px;transform:translateX(-50%);padding:6px 12px;border-radius:9px;background:rgba(8,15,12,.9);border:1px solid rgba(169,247,217,.16);font-size:12px;opacity:0;transition:opacity .3s;z-index:7;pointer-events:none}
+#wmToast.show{opacity:1}
+</style></head>
+<body>
+<div id="wmStage"><canvas id="wmCv"></canvas></div>
+<div id="wmMsg">正在加载…</div>
+<div id="wmBig"><i><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg></i></div>
+<div id="wmToast"></div>
+<div class="wmp-ui" id="wmUi">
+  <button class="wmp-b" id="wmIntro" data-tip="入场：逐张"></button>
+  <button class="wmp-b" id="wmReplay" data-tip="重播入场 (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg></button>
+  <span class="wmp-sep"></span>
+  <button class="wmp-b" id="wmPlay" data-tip="播放 / 暂停 (空格)"></button>
+  <div class="wmp-seek" id="wmSeek"><div class="wmp-track"><div class="wmp-intro" id="wmSeekIntro"></div><div class="wmp-fill" id="wmSeekFill"></div></div><div class="wmp-knob" id="wmSeekKnob"></div></div>
+  <div style="position:relative"><button class="wmp-b wmp-spd" id="wmSpd" data-tip="速度（- / = / 0，滚轮微调）">1×</button>
+    <div class="wmp-pop" id="wmSpdPop"><div class="hd"><span>速度</span><b id="wmSpdVal">1×</b></div>
+      <input type="range" id="wmSpdRange" min="0" max="1000" step="1"><div class="hd"><span>0.1×</span><span id="wmSpdLoop"></span><span>8×</span></div>
+      <div class="row" id="wmSpdChips"></div></div></div>
+  <span class="wmp-sep" id="wmBatchSep"></span>
+  <button class="wmp-b" id="wmPrev" data-tip="上一批"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+  <span class="wmp-batch" id="wmBatch">1/1</span>
+  <button class="wmp-b" id="wmNext" data-tip="下一批"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+  <span class="wmp-sep" id="wmSndSep"></span>
+  <button class="wmp-b" id="wmSnd" data-tip="声音 (M)"></button>
+  <span class="wmp-sep"></span>
+  <button class="wmp-b" id="wmFs" data-tip="全屏 (F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+</div>
+<script type="application/json" id="wm-data">{{DATA}}</script>
+<script>
+// ===== wang-motion v10.1 player (single source: skill engine/player/player.html; used by `wm html` and the web app) =====
+(function () {
+  "use strict";
+  const D = JSON.parse(document.getElementById("wm-data").textContent);
+  const $ = (id) => document.getElementById(id);
+  const IC = {
+    play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4.5" width="4" height="15" rx="1.2"/><rect x="14" y="4.5" width="4" height="15" rx="1.2"/></svg>',
+    stagger: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="13" width="5" height="7" rx="1.2"/><rect x="9.5" y="9" width="5" height="11" rx="1.2" opacity=".75"/><rect x="16" y="4" width="5" height="16" rx="1.2" opacity=".5"/></svg>',
+    snd: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" stroke="none"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>',
+    mute: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" stroke="none"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>',
+    whole: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="6" width="5" height="12" rx="1.2"/><rect x="9.5" y="6" width="5" height="12" rx="1.2"/><rect x="16" y="6" width="5" height="12" rx="1.2"/></svg>',
+  };
+  const PRESETS = [0.1, 0.25, 0.5, 1, 1.5, 2, 4, 8];
+  const s2r = (s) => Math.round((Math.log(s / 0.1) / Math.log(80)) * 1000);
+  const r2s = (r) => { const s = 0.1 * Math.pow(80, r / 1000); return s >= 1 ? Math.round(s * 20) / 20 : Math.round(s * 100) / 100; };
+  const fmtS = (s) => (s >= 10 ? s.toFixed(0) : s >= 1 ? (+s.toFixed(2)).toString() : (+s.toFixed(2)).toString()) + "×";
+  const P = D.player || {};
+  let speed = D.speed || 1, mode = (P.defaultIntro || (D.intro && D.intro.mode) || "stagger");
+  if (!["none", "stagger", "whole"].includes(mode)) mode = "stagger";
+  let eng = null, tpl = null, tl = null, T = 0, playing = false, last = 0, batch = D.batch || 0, quality = 1, fpsAcc = [0, 0], loadingBatch = false, lowSince = 0;
+  const cv = $("wmCv");
+  if (P.controls === false) document.body.classList.add("wmp-noctl");
+  function toast(t) { const el = $("wmToast"); el.textContent = t; el.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove("show"), 1600); }
+
+  // ---- v10.1 背景音乐：音乐走自己的时钟 aT（墙钟秒，从入场第 0 秒起），调速不改音乐；拖动 / 重播 / 换批时对齐到 T ----
+  const AU = D.audio && D.audio.src ? D.audio : null;
+  let aEl = null, aT = 0, muted = false, aBlocked = false, aPending = false;
+  if (AU) { aEl = new Audio(); aEl.preload = "auto"; aEl.src = AU.src; aEl.loop = AU.loop !== false; }
+  function aPos(t) {
+    const off = +AU.offset || 0, L = aEl.duration; let m = off + Math.max(0, t);
+    if (isFinite(L) && L > 0) { if (AU.loop !== false) m = m % L; else if (m >= L - 0.02) return -1; }
+    return m;
+  }
+  function aSync(force) {
+    if (!aEl) return;
+    const want = playing && !muted && !document.hidden;
+    const m = want ? aPos(aT) : -1;
+    if (m < 0) { if (!aEl.paused) aEl.pause(); return; }
+    if (aEl.readyState >= 1 && (force || Math.abs(aEl.currentTime - m) > 0.3)) { try { aEl.currentTime = m; } catch (e) { } }
+    const fi = +AU.fadeIn || 0, vol = AU.volume == null ? 1 : +AU.volume;
+    aEl.volume = Math.max(0, Math.min(1, vol * (fi > 0 ? Math.min(1, aT / fi) : 1)));
+    if (aEl.paused && !aBlocked && !aPending) {
+      aPending = true; const pr = aEl.play();
+      if (pr && pr.then) pr.then(() => { aPending = false; }, () => { aPending = false; aBlocked = true; armUnlock(); }); else aPending = false;
+    }
+  }
+  // 浏览器拦截有声自动播放时：第一次点击 / 按键 / 触摸就出声（声音默认开启）
+  function armUnlock() {
+    if (armUnlock.on) return; armUnlock.on = true; toast("点击任意位置开启声音");
+    const go = () => { armUnlock.on = false; aBlocked = false; ["pointerdown", "keydown", "touchstart"].forEach((k) => removeEventListener(k, go, true)); aSync(true); };
+    ["pointerdown", "keydown", "touchstart"].forEach((k) => addEventListener(k, go, true));
+  }
+  function aSeek() { aT = T; aSync(true); }
+  function setMuted(m) { muted = m; $("wmSnd").innerHTML = m ? IC.mute : IC.snd; $("wmSnd").classList.toggle("on", !m); $("wmSnd").dataset.tip = m ? "已静音（M 开启声音）" : "声音开启（M 静音）"; aSync(true); }
+  document.addEventListener("visibilitychange", () => aSync(true));
+
+  function spec() {
+    const iv = Object.assign({}, D.intro || {}, { mode });
+    return Object.assign({}, D.spec, { width: eng.W, height: eng.H, speed, intro: iv });
+  }
+  function size() {
+    const ar = D.aspect || 16 / 9; const vw = innerWidth, vh = innerHeight;
+    let cw = vw, ch = vw / ar; if (ch > vh) { ch = vh; cw = vh * ar; }
+    cv.style.width = cw + "px"; cv.style.height = ch + "px";
+    const dpr = Math.min(devicePixelRatio || 1, 2) * quality; let W = Math.round(cw * dpr), H = Math.round(ch * dpr);
+    const cap = 2560 * 1440 * quality * quality; if (W * H > cap) { const k = Math.sqrt(cap / (W * H)); W = Math.round(W * k); H = Math.round(H * k); }
+    W -= W % 2; H -= H % 2;
+    if (eng && (eng.W !== W || eng.H !== H)) { eng.setSize(W, H); if (tl) reconfig(); }
+  }
+  function reconfig() { eng.configure(spec(), tpl); tl = eng.tl; updateSeekIntro(); }
+  async function loadBatch(i) {
+    loadingBatch = true; batch = i;
+    await eng.loadMedia(D.batches[i] || []);
+    loadingBatch = false; reconfig(); $("wmBatch").textContent = (i + 1) + "/" + D.batches.length;
+  }
+  function wallLen() { return tl.preWall + tl.loopWall; }
+  function updateSeekIntro() { if (!tl) return; $("wmSeekIntro").style.width = (tl.on ? (tl.preWall / wallLen()) * 100 : 0) + "%"; }
+  function shownT() { if (!tl) return 0; if (T <= tl.preWall) return T; return tl.preWall + ((T - tl.preWall) % tl.loopWall); }
+  function updateSeek() { const f = Math.min(1, shownT() / wallLen()); $("wmSeekFill").style.width = f * 100 + "%"; $("wmSeekKnob").style.left = f * 100 + "%"; }
+  function frame(now) {
+    requestAnimationFrame(frame);
+    const raw = last ? (now - last) / 1000 : 0; last = now;
+    // with music the clock must follow real time (or the music would be pulled back on slow frames); without music v10 behaviour
+    const dt = aEl ? Math.min(0.5, raw) : Math.min(0.1, raw);
+    if (!eng || loadingBatch) return;
+    if (playing) { T += dt; aT += dt; }
+    aSync(false);
+    try { eng.renderTimeSync(T, 60); } catch (e) { console.error(e); }
+    updateSeek();
+    // fluid mode: drop render resolution when the frame rate stays low
+    if (playing && dt > 0) { fpsAcc[0] += dt; fpsAcc[1]++; if (fpsAcc[0] >= 1) { const fps = fpsAcc[1] / fpsAcc[0]; fpsAcc = [0, 0];
+      if (fps < 45 && quality > 0.5) { quality = quality > 0.8 ? 0.75 : 0.5; size(); toast("流畅模式：渲染精度 " + Math.round(quality * 100) + "%"); }
+      else if (fps > 58 && quality < 1) { if (!lowSince) lowSince = now; if (now - lowSince > 6000) { quality = quality < 0.6 ? 0.75 : 1; lowSince = 0; size(); } } else lowSince = 0; } }
+  }
+  function setPlay(on) { playing = on; setTimeout(() => aSync(true), 0); $("wmPlay").innerHTML = on ? IC.pause : IC.play; $("wmBig").classList.toggle("show", !on && T === 0 && P.autoplay === false && !setPlay.started); if (on) setPlay.started = true; }
+  function setMode(m) { mode = m; $("wmIntro").innerHTML = m === "whole" ? IC.whole : IC.stagger; $("wmIntro").dataset.tip = m === "whole" ? "入场：整体（点击切换为逐张）" : "入场：逐张（点击切换为整体）"; if (eng) { reconfig(); T = 0; aSeek(); } }
+  function setSpeed(s, quiet) {
+    s = Math.min(8, Math.max(0.1, s)); const old = speed;
+    // keep the visual position: same template time at the new speed
+    if (tl) { const k = old / s; T = T * k; }
+    speed = s; if (eng) reconfig();
+    $("wmSpd").textContent = fmtS(s); $("wmSpdVal").textContent = fmtS(s); $("wmSpdRange").value = s2r(s);
+    if (tl) $("wmSpdLoop").textContent = (tl.loopWall >= 10 ? tl.loopWall.toFixed(0) : tl.loopWall.toFixed(1)) + " 秒/圈";
+    document.querySelectorAll("#wmSpdChips .chip").forEach((c) => c.classList.toggle("on", +c.dataset.s === s));
+    if (!quiet) toast("速度 " + fmtS(s));
+  }
+  // ---- UI wiring ----
+  $("wmSpdChips").innerHTML = PRESETS.map((s) => `<button class="chip" data-s="${s}">${s}×</button>`).join("");
+  $("wmSpdChips").addEventListener("click", (e) => { const b = e.target.closest(".chip"); if (b) setSpeed(+b.dataset.s); });
+  $("wmSpdRange").addEventListener("input", (e) => setSpeed(r2s(+e.target.value), true));
+  $("wmSpd").addEventListener("click", (e) => { e.stopPropagation(); $("wmSpdPop").classList.toggle("open"); });
+  $("wmSpd").addEventListener("wheel", (e) => { e.preventDefault(); setSpeed(r2s(s2r(speed) + (e.deltaY < 0 ? 25 : -25)), true); }, { passive: false });
+  $("wmSpdPop").addEventListener("click", (e) => e.stopPropagation());
+  document.addEventListener("click", () => $("wmSpdPop").classList.remove("open"));
+  $("wmPlay").addEventListener("click", () => setPlay(!playing));
+  $("wmReplay").addEventListener("click", () => { T = 0; aSeek(); setPlay(true); });
+  $("wmIntro").addEventListener("click", () => { setMode(mode === "whole" ? "stagger" : "whole"); setPlay(true); toast(mode === "whole" ? "整体入场" : "逐张入场"); });
+  $("wmFs").addEventListener("click", () => toggleFs());
+  if (aEl) $("wmSnd").addEventListener("click", () => setMuted(!muted)); else ["wmSnd", "wmSndSep"].forEach((id) => $(id).style.display = "none");
+  $("wmBig").addEventListener("click", () => { setPlay(true); });
+  const nb = (D.batches || []).length;
+  if (nb <= 1) ["wmPrev", "wmNext", "wmBatch", "wmBatchSep"].forEach((id) => $(id).style.display = "none");
+  $("wmPrev").addEventListener("click", () => { loadBatch((batch - 1 + nb) % nb).then(() => { T = 0; aSeek(); }); });
+  $("wmNext").addEventListener("click", () => { loadBatch((batch + 1) % nb).then(() => { T = 0; aSeek(); }); });
+  function toggleFs() { if (document.fullscreenElement) document.exitFullscreen(); else (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen).call(document.documentElement).catch?.(() => {}); }
+  // seek
+  let dragging = false;
+  const seekTo = (x) => { const r = $("wmSeek").getBoundingClientRect(); const f = Math.min(1, Math.max(0, (x - r.left) / r.width)); T = f * wallLen(); aSeek(); };
+  $("wmSeek").addEventListener("pointerdown", (e) => { dragging = true; $("wmSeek").setPointerCapture(e.pointerId); seekTo(e.clientX); });
+  $("wmSeek").addEventListener("pointermove", (e) => { if (dragging) seekTo(e.clientX); });
+  $("wmSeek").addEventListener("pointerup", () => { dragging = false; });
+  // keys
+  addEventListener("keydown", (e) => {
+    if (e.target && e.target.tagName === "INPUT" && e.target.type !== "range") return;
+    if (e.key === " ") { e.preventDefault(); setPlay(!playing); }
+    else if (e.key === "f" || e.key === "F") toggleFs();
+    else if (e.key === "r" || e.key === "R") { T = 0; aSeek(); setPlay(true); }
+    else if ((e.key === "m" || e.key === "M") && aEl) setMuted(!muted);
+    else if (e.key === "-" || e.key === "_") setSpeed(r2s(s2r(speed) - 60));
+    else if (e.key === "=" || e.key === "+") setSpeed(r2s(s2r(speed) + 60));
+    else if (e.key === "0") setSpeed(1);
+    else if (e.key === "ArrowLeft") { T = Math.max(0, T - 1); aSeek(); }
+    else if (e.key === "ArrowRight") { T += 1; aSeek(); }
+    else return;
+    wake();
+  });
+  // auto-hide controls
+  let idleT = 0; const ui = $("wmUi");
+  function wake() { ui.classList.remove("idle"); document.body.style.cursor = ""; clearTimeout(idleT); idleT = setTimeout(() => { if (!$("wmSpdPop").classList.contains("open") && !dragging) { ui.classList.add("idle"); document.body.style.cursor = "none"; } }, 2200); }
+  addEventListener("mousemove", wake); addEventListener("pointerdown", wake); addEventListener("touchstart", wake, { passive: true });
+  addEventListener("resize", () => size());
+
+  async function boot() {
+    const X = window.WMX; tpl = X.templates[D.template];
+    if (!tpl) { $("wmMsg").textContent = "模板缺失：" + D.template; return; }
+    eng = new X.Engine(cv);
+    size(); if (!eng.W) eng.setSize(1280, 720);
+    if (D.bgImage) { try { await eng.setBackgroundImage(D.bgImage); } catch (e) { console.warn(e); } }
+    await eng.loadMedia(D.batches[batch] || []);
+    eng.configure(spec(), tpl); tl = eng.tl; updateSeekIntro();
+    if (eng.setupOverlays && (D.spec.text || D.logo)) { try { await eng.setupOverlays(D.spec, D.logo || null); } catch (e) { console.warn(e); } }
+    $("wmBatch").textContent = (batch + 1) + "/" + nb;
+    $("wmMsg").style.display = "none";
+    setMode(mode); setSpeed(speed, true); if (aEl) setMuted(false);
+    setPlay(P.autoplay !== false);
+    if (P.autoplay === false) $("wmBig").classList.add("show");
+    wake(); requestAnimationFrame(frame);
+    window.WMP = { get T() { return T; }, set T(v) { T = v; }, get speed() { return speed; }, setSpeed, setMode, setPlay, get mode() { return mode; }, get quality() { return quality; }, setQuality: (q) => { quality = q; size(); }, tl: () => tl, loadBatch, setMuted, get audio() { return aEl ? { paused: aEl.paused, currentTime: aEl.currentTime, duration: aEl.duration, volume: aEl.volume, muted, blocked: aBlocked, aT } : null; }, ready: true };
+  }
+  if (window.WMX) boot(); else addEventListener("wmx-ready", boot, { once: true });
+})();
+</script>
+<!--WM_ENGINE-->
+</body></html>

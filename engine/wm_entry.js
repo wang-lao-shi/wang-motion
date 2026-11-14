@@ -1,4 +1,5 @@
 import { Engine, THREE, RATIOS } from './core.js';
+import { timelineInfo, timeMap, normIntro, INTRO_COMPAT, START_PHASE, SPEED_MIN, SPEED_MAX } from './intro.js';
 import t0 from './templates/3d-perspective/card-globe.js';
 import t1 from './templates/3d-perspective/card-tunnel.js';
 import t2 from './templates/3d-perspective/cover-ring-vertical.js';
@@ -100,7 +101,7 @@ import t97 from './templates/transitions/spin-zoom.js';
 import t98 from './templates/transitions/whip-pan.js';
 import t99 from './templates/transitions/zoom-punch.js';
 const list=[t0,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15,t16,t17,t18,t19,t20,t21,t22,t23,t24,t25,t26,t27,t28,t29,t30,t31,t32,t33,t34,t35,t36,t37,t38,t39,t40,t41,t42,t43,t44,t45,t46,t47,t48,t49,t50,t51,t52,t53,t54,t55,t56,t57,t58,t59,t60,t61,t62,t63,t64,t65,t66,t67,t68,t69,t70,t71,t72,t73,t74,t75,t76,t77,t78,t79,t80,t81,t82,t83,t84,t85,t86,t87,t88,t89,t90,t91,t92,t93,t94,t95,t96,t97,t98,t99];const templates={};for(const t of list)templates[t.id]=t;
-window.WMX={Engine,THREE,RATIOS,templates};
+window.WMX={Engine,THREE,RATIOS,templates,timelineInfo,timeMap,normIntro,INTRO_COMPAT,START_PHASE,SPEED_MIN,SPEED_MAX,version:10};
 // 同步渲染（仅图片素材，无需等待视频同步）：与 renderAt 逻辑一致
 Engine.prototype.renderSync = function (t, fps = 30) {
   const mb = this.fx.motionBlur | 0;

@@ -1,0 +1,8 @@
+{
+  "template": "card-globe",
+  "ratio": "16:9", "res": 1080, "fps": 30,
+  "speed": 1,
+  "intro": { "mode": "stagger", "style": "rise", "order": "center", "dur": 2.5, "hold": 0.3 },
+  "loops": 2,
+  "background": { "type": "gradient", "colors": ["#123526", "#0A1F17", "#040C09"], "radial": true }
+}

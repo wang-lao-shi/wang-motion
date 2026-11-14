@@ -1,0 +1,33 @@
+/* ===== WANG MOTION v10: 调速面板 / 入场栏 / 交互网页 ===== */
+.wm-spd-btn { font-variant-numeric: tabular-nums; gap: 6px !important; border: 1px solid rgba(120, 211, 169, .28) !important; background: rgba(16, 37, 29, .55) !important; }
+.wm-spd-btn .v { color: var(--wm-mint, #74EBC1); font-weight: 750; }
+.wm-spd-btn .l { color: rgba(245, 247, 243, .62); font-weight: 550; }
+.wm-spd-btn svg { width: 13px; height: 13px; opacity: .8; }
+.wm-spd-pop { position: fixed; z-index: 9999; width: 300px; padding: 14px 14px 12px; border-radius: 14px; background: rgba(8, 20, 15, .97); border: 1px solid rgba(120, 211, 169, .24); box-shadow: 0 18px 50px rgba(0, 0, 0, .5); color: #F5F7F3; font: 500 12px var(--wm-font, sans-serif); display: none; }
+.wm-spd-pop.open { display: block; }
+.wm-spd-pop .hd { display: flex; align-items: baseline; justify-content: space-between; }
+.wm-spd-pop .hd b { font-size: 22px; font-weight: 750; color: #A9F7D9; font-variant-numeric: tabular-nums; }
+.wm-spd-pop .hd span { color: rgba(245, 247, 243, .6); }
+.wm-spd-pop input[type=range] { width: 100%; margin: 12px 0 2px; accent-color: #74EBC1; }
+.wm-spd-pop .ticks { display: flex; justify-content: space-between; color: rgba(245, 247, 243, .45); font-size: 11px; }
+.wm-spd-pop .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.wm-spd-pop .chips button { height: 28px; min-width: 44px; padding: 0 9px; border-radius: 8px; border: 1px solid rgba(120, 211, 169, .2); background: rgba(16, 37, 29, .5); color: rgba(245, 247, 243, .85); font: 650 12px var(--wm-font, sans-serif); cursor: pointer; }
+.wm-spd-pop .chips button.on { background: rgba(116, 235, 193, .2); border-color: rgba(116, 235, 193, .6); color: #fff; }
+.wm-spd-pop .kb { margin-top: 10px; color: rgba(245, 247, 243, .45); font-size: 11px; line-height: 1.6; }
+.wm-spd-pop .kb kbd { font: 600 10px var(--font-mono, monospace); padding: 1px 5px; border-radius: 4px; border: 1px solid rgba(245, 247, 243, .25); color: rgba(245, 247, 243, .75); }
+.wm-intro-btn.on { color: var(--accent, #74EBC1); }
+.wm-ex-sub { margin-top: 10px; padding: 12px; border-radius: 12px; background: rgba(16, 37, 29, .35); border: 1px solid rgba(120, 211, 169, .12); display: grid; grid-template-columns: 52px 1fr; gap: 10px 12px; align-items: center; }
+.wm-ex-sub.hide, .wm-ex-v10.hide { display: none; }
+.wm-ex-sub > span { font-size: 12px; color: var(--wm-text-3, #9ab); }
+.wm-ex-sub .wm-seg button { height: 30px; padding: 0 11px; font-size: 12px; }
+.wm-ex-sub .rng { display: flex; align-items: center; gap: 10px; }
+.wm-ex-sub .rng input[type=range] { flex: 1; accent-color: #74EBC1; }
+.wm-ex-sub .rng b { min-width: 46px; text-align: right; font: 650 12px var(--font-mono, monospace); color: #F5D5AF; }
+.wm-ex-sub input[type=number], .wm-ex-v10 input[type=number] { width: 70px; height: 28px; border-radius: 8px; border: 1px solid rgba(120, 211, 169, .25); background: rgba(5, 15, 11, .6); color: #F5F7F3; padding: 0 8px; font: 600 12px var(--font-mono, monospace); }
+.wm-seg button.wm-dis { opacity: .4; }
+.wm-seg button.wm-dis::after { content: " · 自动整体"; font-weight: 500; font-size: 11px; }
+.wm-ex-hint { margin-top: 8px; font-size: 12px; color: #E6A36E; line-height: 1.5; }
+.wm-ex-hint.ok { color: rgba(169, 247, 217, .75); }
+.wm-ex-hint:empty { display: none; }
+#wmExDurCustom { margin-left: 4px; }
+#wmExFmts.wm-ex-fmts { grid-template-columns: repeat(6, 1fr); }

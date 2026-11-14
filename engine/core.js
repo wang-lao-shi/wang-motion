@@ -4,6 +4,8 @@ import * as THREE from './vendor/three.module.js';
 import { M, E, normParams, hash, deviceInfo } from './lib.js';
 
 export { THREE };
+import { timelineInfo, timeMap, applyIntro, scalePost, scaleParticles, visibleCount, normIntro, normSpeed } from './intro.js';
+export { timelineInfo, timeMap, normIntro, normSpeed };
 
 // ---------- card shader ----------
 const cardVert = /* glsl */`
@@ -1028,6 +1030,7 @@ export class Engine {
       this.accScene = new THREE.Scene(); this.accScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.accMat));
     }
     if (template.setup) template.setup(this.makeCtx(0));
+    this.tl = timelineInfo(spec, spec.duration || 16, template.id); // v10 timeline (speed + intro)
   }
 
   async setBackgroundImage(url) { if (!url) return; this.bgTex = await new THREE.TextureLoader().loadAsync(url); this.bgTex.colorSpace = THREE.SRGBColorSpace; }
@@ -1299,7 +1302,7 @@ export class Engine {
     return { tex: e.tex, uv: e.uv, w: e.wpx * fw * k, h: e.hpx * fh * k, offX: ox, offY: oy, sd: 2 * GLYPH_R * k, cap, adv: e.adv * k, pad: (GLYPH_R + 2) * k };
   }
 
-  layoutFrame(t) {
+  layoutFrame(t, P = null) {
     const ctx = this.makeCtx(t);
     const p = ctx.p; const tpl = this.tpl;
     // camera
@@ -1319,10 +1322,14 @@ export class Engine {
     ctx.camDist = dist;
     ctx.fullFrame = (z = 0, margin = 1.04) => this.fullFrame(z, margin);
     const _lo = tpl.layout(ctx) || []; // X3b: layout may return { cards, particles } (array still accepted)
-    let cards = Array.isArray(_lo) ? _lo : (_lo.cards || []); const particles = Array.isArray(_lo) ? null : _lo.particles;
+    let cards = Array.isArray(_lo) ? _lo : (_lo.cards || []); let particles = Array.isArray(_lo) ? null : _lo.particles;
+    let _fxA = 1; // v10 intro layer (P = intro progress on the frozen start pose; null = untouched v9 path)
+    if (P != null) { this.camera.updateMatrixWorld(); const r = applyIntro(cards, P, this.tl.intro, this.camera, THREE); cards = r.cards; _fxA = r.fxA; if (particles) particles = scaleParticles(particles, _fxA); }
+    this._introFx = _fxA; this._rawCards = Array.isArray(_lo) ? _lo : (_lo.cards || []);
     this._hasGrp = false; cards = this.expandDevices(cards, ctx); // X2: device cards -> body + screen + details (no-op without devices)
     if (this.slabPool) for (const S of this.slabPool) if (S) { S.walls.visible = false; S.cap.visible = false; S.capM.visible = false; S.on = false; S.gN = 0; if (S.glayers) for (const o of S.glayers) o.visible = false; } // X9
     this._tplPost = normTplPost((!Array.isArray(_lo) && _lo.post) || (tpl.post ? tpl.post(ctx) : null)); // X4a
+    if (_fxA < 1 && this._tplPost) this._tplPost = scalePost(this._tplPost, _fxA);
     const gRadius = (p.cornerRadius ?? this.spec.cornerRadius ?? 3) / 100; // fraction of card min side
     const shadowOn = this.spec.shadow ?? p.shadow ?? tpl.shadow ?? true;
     const sheen = this.spec.sheen ?? p.sheen ?? tpl.sheen ?? 0;
@@ -1709,6 +1716,7 @@ export class Engine {
       const inD = cfg.in ?? 0.8; const enter = E.outCubic(M.clamp((t - (cfg.delay ?? 0)) / inD, 0, 1));
       if (anim === 'fade') op *= enter; else if (anim === 'rise') { op *= enter; y -= (1 - enter) * 0.05; } else if (anim === 'pop') { const e = M.clamp((t - (cfg.delay ?? 0)) / inD, 0, 1); op *= Math.min(1, e * 2.5); const k = e >= 1 ? 1 : 0.6 + 0.4 * E.outBack(e); o.mesh.scale.set(bs.x * k, bs.y * k, 1); }
       else if (anim === 'loop-fade') { op *= M.clamp(Math.min(t / 0.6, (dur - t) / 0.6), 0, 1); }
+      if (this._introFx !== undefined && this._introFx < 1) op *= this._introFx;
       o.mesh.position.set(x, y, 0); o.mesh.material.opacity = op;
     }
   }
@@ -1744,6 +1752,43 @@ export class Engine {
       this.layoutFrame(t); const pp = this._tplPost;
       if (pp) { this.renderScene(this.rtA); this.finishTpl(this.rtA.texture, t, pp); }
       else if (this.fx.grain || this.fx.vignette || this.fx.aberration) { this.renderScene(this.rtA); this.post(this.rtA.texture, t); }
+      else this.renderScene(null);
+    }
+  }
+  // ---------- v10 timeline rendering (wall-clock seconds T; speed + intro) ----------
+  // Plain loops at 1x go through the untouched v9 renderAt, so pixels match v9 exactly.
+  introVisible(t) { // visible cards of the start pose at template time t (stagger -> whole fallback, wm info, web UI)
+    this.layoutFrame(t); this.camera.updateMatrixWorld(); return visibleCount(this._rawCards || [], this.camera, THREE);
+  }
+  async renderAtTime(T, fps = 30) {
+    const tl = this.tl; const m = timeMap(T, tl);
+    if (!tl.on && tl.speed === 1) return this.renderAt(m.t, fps);
+    await this.syncVideos(m.t);
+    return this._renderTL(T, m, fps);
+  }
+  renderTimeSync(T, fps = 30) {
+    const tl = this.tl; const m = timeMap(T, tl);
+    if (!tl.on && tl.speed === 1) return this.renderSync ? this.renderSync(m.t, fps) : this.renderAt(m.t, fps);
+    return this._renderTL(T, m, fps);
+  }
+  _renderTL(T, m, fps) {
+    const D = this.spec.duration || 16; const wrap = (x) => (x == null ? x : ((x % D) + D) % D);
+    const mb = this.fx.motionBlur | 0;
+    if (mb > 1) {
+      const r = this.renderer; r.setRenderTarget(this.rtAcc); r.setClearColor(0x000000, 1); r.clear();
+      let pp = null;
+      for (let k = 0; k < mb; k++) {
+        const TT = T + ((k / (mb - 1)) - 0.5) * this.fx.shutter / fps; // shutter in wall time -> template time scales with speed
+        const mm = timeMap(Math.max(0, TT), this.tl); this.layoutFrame(wrap(mm.t), mm.P);
+        if (k === (mb >> 1)) pp = this._tplPost;
+        this.renderScene(this.rtA); this.accMat.uniforms.tDiffuse.value = this.rtA.texture; this.accMat.uniforms.uW.value = 1 / mb;
+        r.setRenderTarget(this.rtAcc); r.autoClear = false; r.render(this.accScene, this.flatCam);
+      }
+      if (pp) this.finishTpl(this.rtAcc.texture, m.t, pp); else this.post(this.rtAcc.texture, m.t);
+    } else {
+      this.layoutFrame(m.t, m.P); const pp = this._tplPost;
+      if (pp) { this.renderScene(this.rtA); this.finishTpl(this.rtA.texture, m.t, pp); }
+      else if (this.fx.grain || this.fx.vignette || this.fx.aberration) { this.renderScene(this.rtA); this.post(this.rtA.texture, m.t); }
       else this.renderScene(null);
     }
   }

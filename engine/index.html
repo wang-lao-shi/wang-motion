@@ -23,6 +23,13 @@ window.WM = {
     return document.getElementById('c').toDataURL('image/' + fmt, q);
   },
   async draw(t, fps) { await eng.renderAt(t, fps); return true; },
+  // v10: wall-clock timeline (speed + intro)
+  async frameAt(T, fps, fmt = 'jpeg', q = 0.94) {
+    await eng.renderAtTime(T, fps);
+    return document.getElementById('c').toDataURL('image/' + fmt, q);
+  },
+  timeline() { const tl = eng.tl; return { speed: tl.speed, on: tl.on, phase0: tl.phase0, D: tl.D, introWall: tl.introWall, preWall: tl.preWall, loopWall: tl.loopWall, intro: tl.intro }; },
+  visible(t) { return eng.introVisible(t); },
 };
 window.WM_READY = true;
 </script></body></html>

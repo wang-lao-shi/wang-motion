@@ -1,11 +1,11 @@
 ---
 name: wang-motion
-description: 用 wang-motion CLI（/workspace/wang-motion）把一组图片/视频套进卡片动效模板，输出无缝循环的 MP4 / WebM / GIF / PNG。用户要做作品集展示、产品图轮播、相册动效、卡片墙、3D 环绕、手机样机展示、社媒循环短片时加载。100 个原创模板（ref: "original"），16 个分类。
+description: 用 wang-motion CLI把一组图片/视频套进卡片动效模板，输出无缝循环的 MP4 / WebM / GIF / PNG，或单文件离线播放的交互网页（.html）。v10 支持 0.1–8× 调速和卡片逐张 / 整体入场；v10.1 支持背景音乐（--audio 文件或网址）。用户要做作品集展示、产品图轮播、相册动效、卡片墙、3D 环绕、手机样机展示、社媒循环短片时加载。100 个模板（70 复刻 + 30 原创），16 个分类。
 ---
 
 # wang-motion
 
-位置：`/workspace/wang-motion`。命令统一写 `node /workspace/wang-motion/bin/wm.mjs <cmd>`（下文简写 `wm`）。完整用户文档见 `README.md`，模板编写见 `docs/AUTHORING.md`。
+位置：`SKILL.md` 所在目录即项目根目录。先切换到该目录，再运行 `node bin/wm.mjs <cmd>`（下文简写 `wm`）；从其他目录运行时使用该文件的实际路径。完整用户文档见 `README.md`，模板编写见 `docs/AUTHORING.md`。
 
 ## 什么时候用
 
@@ -19,12 +19,12 @@ description: 用 wang-motion CLI（/workspace/wang-motion）把一组图片/视�
 
 1. `wm doctor`：确认 chrome / ffmpeg / imagemagick / webgl2 都 ok
 2. 选模板：`wm list --json`，按 category、desc、tags、slots 筛；不确定就出预览图对比
-3. 预览：`wm sheet <id1> <id2> <id3> --ratio 16:9 --res 300 --out /tmp/cmp.jpg`，用 read_file 看图；单模板看动作用 `--frames 8`
+3. 预览：`wm sheet <id1> <id2> <id3> --ratio 16:9 --res 300 --out cmp.jpg`，查看图片；单模板看动作用 `--frames 8`
 4. 调参：`wm info <id>` 看参数，`wm still <id> --param k=v --res 360 --at 0.3,0.7` 迭代
 5. 试渲染：`--res 360 --duration 4` 先出短片检查
 6. 正式渲染：目标分辨率/时长，输出路径写清楚
 
-机器只有 2 核：预览阶段一律 ≤400px。参考耗时：360p 静帧约 4 s；2 s 360p 视频约 8 s；1080p 16 s 30fps 是 480 帧，会慢很多，别在探索阶段跑。
+预览阶段优先使用 ≤400px；正式渲染按机器性能选择分辨率。1080p、16 秒、30fps 需要渲染 480 帧，先用低分辨率确认效果。
 
 ## 命令速查
 
@@ -33,8 +33,13 @@ wm list [category] [--category c] [--json]
 wm info <id | "Display Name">
 wm still <id> [--at 0.3 | --at 0,0.5,0.9 | --at 3.5 | --at 1 --seconds] [--res 720] [--ratio 9:16] [--width W --height H] --out x.png
 wm sheet [ids...] [--category c] [--frames 8] [--ratio 1:1] [--cols 6] [--res 360] [--at 0.3] --out sheet.jpg
-wm render <id> [--spec spec.json] --out out.mp4|.webm|.gif [--format mp4] [--audio a.mp3]
+wm render <id> [--spec spec.json] --out out.mp4|.webm|.gif [--format mp4] [--audio a.mp3|url] [--audio-fit]
           [--ratio 16:9] [--res 1080] [--duration 16] [--fps 30] [--crf 16] [--preset medium] [--workers 2] [--motionblur 6]
+          [--speed 0.5] [--intro none|stagger|whole ...] [--loops 2] [--length 20] [--gif-once]
+wm still <id> --at-time 1.2[,2.4]     # v10：按墙钟秒数取帧（含入场段）；原 --at 不变
+wm sheet <ids...> --intro-frames 6    # v10：入场过程对照图（默认逐张入场）
+wm html <id> [通用选项] [--controls false] [--autoplay false] [--all-batches --batch-size 12] [--img-max 1024|1600|orig] --out x.html
+wm info <id>                          # v10：多一个 intro 字段（起始相位、同屏卡数、是否适合逐张入场）
 wm doctor
 ```
 
@@ -66,6 +71,49 @@ wm doctor
 
 位置取值：`top-left top top-right left center right bottom-left bottom bottom-right`。
 
+## 调速（v10）
+
+- `--speed 0.5`：整条时间轴的倍率（0.1–8），等价于「循环时长 ÷ speed」，入场也跟着变快 / 变慢。16 s 的模板 `--speed 0.5` → 32 s/圈
+- `--duration` 保留 v9 含义（1× 下一圈的秒数）；和 `--speed` **不能同时给**（会报错）。要慢就用 `--speed`
+- `render` 在开了速度或入场时，默认长度 = 入场 + 停顿 + `--loops N` 圈（默认 1 圈）；`--length 秒` 仍可截断
+- ≥4× 时动作容易跳帧，加 `--motionblur 6`；子帧间隔已按速度换算
+- speed=1 且不开入场时走 v9 原代码路径，输出与 v9 逐像素一致
+
+## 入场（v10）
+
+动画顺序：**入场 → 成形停顿 → 原动效循环 N 圈**。入场和停顿期间画面定格在起始姿态，之后用 0.4 s 起速缓入无缝接上原动效（不改位置，只让速度从 0 平滑加到正常，避免「顿一下」）。
+
+```bash
+--intro none|stagger|whole      # 无（默认）/ 逐张 / 整体
+--intro-style rise|fly|pop|flip # 淡入上浮 / 由远飞近 / 缩放弹出 / 翻转
+--intro-order index|center|ltr|random   # 按序号 / 从中心向外 / 从左到右 / 随机
+--intro-dur 2.5 --intro-hold 0.3 --intro-seed 1   # 时长（秒，1× 下）、停顿、随机种子
+--intro-phase 0.5               # 覆盖起始姿态（循环相位）；--no-ramp 关闭起速缓入
+```
+
+- 每张卡的间隔自动算，卡再多也在 `--intro-dur` 内入场完；只有看得见的卡逐张入场，背面 / 画面外的卡随最后一张淡入；光效、粒子、模板后期（glitch / bloom / 漏光）、标题在入场末尾淡入；手机等样机整体入场；镜面倒影跟随本体
+- 同屏少于 3 张卡的全屏幻灯类（19 个，`wm info` 里 `stagger: fallback`）逐张会自动改成整体淡入
+- 有 7 个模板的相位 0 是空场 / 半成形，入场改从成形姿态开始（grid-reveal 0.5、cascade-drop 0.7、bloom-belt 0.2、fan-shuffle 0.4、sweep-ring 0.7、triple-scene 0.45、mosaic-reveal 0.125）
+- 先 `wm sheet <id> --intro-frames 6 --res 300` 看入场过程再出片
+- GIF 每次循环都会重播入场；要无缝循环 GIF 就别开入场，或加 `--gif-once`（只播一次）
+- 详见 `docs/intro.md`
+
+## 交互网页（v10）
+
+`wm html <id> --media-dir ./p --intro stagger --out show.html`：单个 .html，双击离线播放（引擎压缩后约 0.42 MB + 图片）。网页里能切逐张 / 整体入场、重播、播放 / 暂停（空格）、调速（- / = / 0）、拖进度、全屏（F）、切批次；掉帧自动降精度。图片按 `--img-max`（默认 1600）重压成 JPEG（带透明的保留 PNG）；视频素材会被跳过。详见 `docs/html-export.md`。
+
+## 背景音乐（v10.1）
+
+`render` 和 `html` 都能加：`--audio bgm.mp3`（或 `https://…` 网址）。规则和网页 App 完全一样：
+- 音乐从入场第 0 秒起播，**调速不改音乐**（动画 4× 时音乐仍是原速）
+- 视频长度仍由动画决定（入场 + `--loops` 圈）：音乐短就循环（`--no-audio-loop` 关掉，后面补静音），长就在结尾淡出切掉
+- `--audio-volume 0..1`（1）、`--audio-offset 秒`（从音乐第几秒开始，0）、`--audio-fade-in`（0.5）、`--audio-fade-out`（1，只用于 render）
+- `--audio-fit`：视频长度跟音乐走，自动算出能盖住整首歌的整数圈
+- `wm html` 默认把音乐嵌进 .html（离线有声，3 分钟 MP3 约 +4~6 MB）；`--audio-link` 只引用网址（文件小，要联网）。播放器声音默认开启，浏览器拦截自动出声时第一次点击 / 按键即出声；M 静音
+- GIF 不带声音（会提示后忽略）
+- spec.json：`"audio": { "src": "bgm.mp3", "volume": 0.8, "offset": 0, "fadeIn": 0.5, "fadeOut": 1, "loop": true, "fit": false }`，相对路径先按 spec 所在目录找（网页 ZIP 里的 `audio/xxx.mp3` 可直接复现）
+- 详见 `docs/audio.md`
+
 ## 关键限制（会踩坑的）
 
 - `--duration` 是**整个循环**的长度：缩短 = 动作加速，不是裁剪。想要舒缓就加长（多数模板默认 12–20 s）
@@ -76,10 +124,13 @@ wm doctor
 - 视频素材：MP4/MOV 会自动转码为 WebM（需要 ffmpeg）
 - `--width/--height` 必须同时给，否则按 ratio+res 算；尺寸自动取偶数
 - GIF 帧率上限 20、宽上限 720，适合预览不适合高质量交付
-- `--audio` 用 `-shortest`：音频比视频长会被截，比视频短则视频被截
+- `--audio`（v10.1 起）不会再截短视频：长度永远按动画算，音乐循环或淡出切掉
 - 素材少于模板 `slots` 会循环复用；数量差太多时画面重复明显，告诉用户或换 slots 更少的模板
 - `sheet` 需要 ImageMagick；`render` 需要 ffmpeg
 - 下划线开头的测试模板不在 list 里，别推荐给用户
+- v10：`--speed` 与 `--duration` 互斥；开入场后 `--duration` 仍是 1× 一圈的长度，不是视频总长；视频总长看 render 的第一行日志
+- v10：`still --at` 永远是「不带入场」的循环帧；要拍入场过程用 `--at-time`
+- v10：交互网页只嵌图片，视频卡面会被跳过；文字模板在网页里用系统字体（与 v9 网页一致），CLI 用内置 Inter / Noto Sans SC
 
 ## 配方
 
@@ -112,7 +163,20 @@ for r in 16:9 1:1 9:16; do wm render cover-flow --media-dir ./p --ratio $r --res
 wm render sphere-wall --media-dir ./p --ratio 21:9 --res 720 --out hero.webm
 ```
 
-**加配乐**：`--audio bgm.mp3`，并把 `--duration` 设成音乐长度或其约数。
+**加配乐**：`--audio bgm.mp3 --audio-volume 0.8`；想让视频正好盖住整首歌就加 `--audio-fit`。
+
+**开场逐张入场 + 循环两圈**
+```bash
+wm sheet card-globe --intro-frames 6 --res 300 --out intro.jpg          # 先看入场
+wm render card-globe --media-dir ./p --intro stagger --intro-style rise --intro-order center --loops 2 --out globe.mp4
+```
+
+**慢速展示（0.5×）**：`wm render cover-flow --media-dir ./p --speed 0.5 --out slow.mp4`（一圈 32 s）
+
+**发给客户的离线网页**
+```bash
+wm html cover-flow --media-dir ./p --intro stagger --speed 0.75 --img-max 1600 --out cover-flow.html
+```
 
 
 ## 素材张数
@@ -159,37 +223,44 @@ wm render sphere-wall --media-dir ./p --ratio 21:9 --res 720 --out hero.webm
   "text": [{ "content": "WANG MOTION", "position": "bottom", "size": 7, "color": "#ffffff", "animate": "loop-fade", "weight": 800 }],
   "logo": { "src": "/abs/path/logo.png", "position": "top-right", "size": 6, "opacity": 0.9 },
   "keyframes": { "cardSize": [[0, 40], [6, 60, "outCubic"], [12, 40]] },
-  "fx": { "vignette": 0.4, "grain": 0.2, "motionBlur": 0 }
+  "fx": { "vignette": 0.4, "grain": 0.2, "motionBlur": 0 },
+  "speed": 1,
+  "intro": { "mode": "stagger", "style": "rise", "order": "index", "dur": 2.5, "hold": 0.3, "seed": 1 },
+  "loops": 1,
+  "player": { "controls": true, "autoplay": true, "imgMax": 1600, "allBatches": false },
+  "audio": { "src": "bgm.mp3", "volume": 0.8, "offset": 0, "fadeIn": 0.5, "fadeOut": 1, "loop": true }
 }
 ```
+
+v10 字段都可省：`speed`（默认 1）、`intro`（默认无，也可写字符串 `"stagger"`）、`loops`/`length`（render 长度）、`player`（只给 `wm html` 用）。旧 spec 照常可用。示例：`examples/intro.spec.json`、`examples/player.spec.json`。
 
 `background.type`：color / gradient（`radial`、`animate` 可选）/ image（`image`、`dim`）/ aurora。`fx`：motionBlur、shutter、grain、vignette、aberration。text 每条还可设 `font`、`x`/`y`（偏移 %）、`opacity`、`delay`、`in`、`shadow: false`。
 
 ## 输出与交付
 
 - 输出：`.mp4`（h264 yuv420p faststart，crf 16）、`.webm`（vp9）、`.gif`、`still` 出 `.png`；命令成功后 stdout 最后一行是输出路径
-- 工作文件放项目 `work/` 或用户指定目录；交付前用 read_file 看一张 still（或 `ffmpeg -ss 2 -i out.mp4 -frames:v 1 /tmp/chk.png`）确认画面不是黑屏、文字没被截断
+- 工作文件放项目 `work/` 或用户指定目录；交付前查看一张 still（或 `ffmpeg -ss 2 -i out.mp4 -frames:v 1 chk.png`）确认画面不是黑屏、文字没被截断
 - 用户字幕/文字偏好（如不要标点）同样适用于 `--text`
 - 汇报时给：模板 id、画幅/分辨率/时长、文件路径；不要描述内部引擎实现
 
-## 分类一览（100 个原创，ref: "original"）
+## 分类一览（100 = 70 复刻 + 30 原创★）
 
-| 分类 | 数量 | 包含模板 |
-|---|---:|---|
-| 3d-perspective | 14 | `card-globe` `card-tunnel` `cover-ring-vertical` `cover-ring` `depth-stack-scroll` `double-helix` `moebius-ribbon` `orbit-globe` `parallax-totem` `showcase-stream` `sphere-cascade` `sphere-wall` `spiral-stream` `totem-wall` |
-| carousel-flow | 12 | `arc-carousel` `card-totem` `carousel-flow` `cover-flow-vertical` `cover-flow` `diagonal-carousel` `film-strip` `focus-slider` `hero-reel` `mosaic-marquee` `parallax-rows` `wheel-carousel` |
-| device-mockup | 3 | `phone-hero-swing` `phone-scroll-feed` `phone-trio-fan` |
-| flythrough | 1 | `gallery-corridor` |
-| glitch | 1 | `glitch-cut-slideshow` |
-| grid | 10 | `bento-reshuffle` `column-drift` `feed-scroll` `flip-grid` `grid-reveal` `masonry-scroll` `pop-grid` `spotlight-zoom` `ticker-loop` `ticker-tilt` |
-| isometric | 5 | `iso-cascade` `iso-endless-stairs` `iso-equalizer` `iso-focus` `iso-orbit` |
-| kinetic-type | 2 | `title-stagger-rise` `word-slot-roll` |
-| light-fx | 3 | `glow-sweep-grid` `light-leak-cuts` `prism-converge` |
-| multiscene | 15 | `bloom-belt` `collage-reel` `fan-shuffle` `flyby-rolodex` `grid-dive` `grid-zoom-strip` `lens-orbit` `pop-parade` `product-launch` `scatter-dial` `spread-columns` `spread-rows` `stairway` `sweep-ring` `triple-scene` |
-| orbit | 10 | `atom-orbits` `focus-orbit` `orbit-bloom` `orbit-carousel` `orbit-showcase` `photo-orbit` `planet-rings` `vortex-spin` `wheel-spin-bottom` `wheel-spin` |
-| particles | 2 | `bokeh-cover-flow` `dust-hero-light` |
-| reveal-wipe | 4 | `diagonal-wipe` `mosaic-reveal` `split-reveal` `stripe-reveal` |
-| spotlight-focus | 6 | `center-stage` `deck-peel` `focus-rack` `focus-shift` `polaroid-develop` `zoom-parallax` |
-| stack-scatter | 9 | `card-fountain` `card-toss` `cascade-deck` `cascade-drop` `desk-photo-toss` `image-trail` `position-dance` `poster-burst` `stack-slide` |
-| transitions | 3 | `spin-zoom` `whip-pan` `zoom-punch` |
-| **合计** | **100** | |
+| 分类 | 总数 | 复刻 | 原创 | 模板（★ = 原创） |
+|---|---:|---:|---:|---|
+| 3d-perspective | 14 | 12 | 2 | `card-globe` `card-tunnel` `cover-ring-vertical` `cover-ring` `depth-stack-scroll` `double-helix`★ `moebius-ribbon`★ `orbit-globe` `parallax-totem` `showcase-stream` `sphere-cascade` `sphere-wall` `spiral-stream` `totem-wall` |
+| carousel-flow | 12 | 10 | 2 | `arc-carousel`★ `card-totem` `carousel-flow` `cover-flow-vertical` `cover-flow` `diagonal-carousel` `film-strip` `focus-slider` `hero-reel` `mosaic-marquee` `parallax-rows`★ `wheel-carousel` |
+| device-mockup | 3 | 0 | 3 | `phone-hero-swing`★ `phone-scroll-feed`★ `phone-trio-fan`★ |
+| flythrough | 1 | 0 | 1 | `gallery-corridor`★ |
+| glitch | 1 | 0 | 1 | `glitch-cut-slideshow`★ |
+| grid | 10 | 8 | 2 | `bento-reshuffle`★ `column-drift` `feed-scroll` `flip-grid` `grid-reveal` `masonry-scroll`★ `pop-grid` `spotlight-zoom` `ticker-loop` `ticker-tilt` |
+| isometric | 5 | 3 | 2 | `iso-cascade` `iso-endless-stairs`★ `iso-equalizer`★ `iso-focus` `iso-orbit` |
+| kinetic-type | 2 | 0 | 2 | `title-stagger-rise`★ `word-slot-roll`★ |
+| light-fx | 3 | 0 | 3 | `glow-sweep-grid`★ `light-leak-cuts`★ `prism-converge`★ |
+| multiscene | 15 | 14 | 1 | `bloom-belt` `collage-reel` `fan-shuffle` `flyby-rolodex` `grid-dive` `grid-zoom-strip` `lens-orbit` `pop-parade` `product-launch`★ `scatter-dial` `spread-columns` `spread-rows` `stairway` `sweep-ring` `triple-scene` |
+| orbit | 10 | 8 | 2 | `atom-orbits`★ `focus-orbit` `orbit-bloom` `orbit-carousel` `orbit-showcase` `photo-orbit` `planet-rings`★ `vortex-spin` `wheel-spin-bottom` `wheel-spin` |
+| particles | 2 | 0 | 2 | `bokeh-cover-flow`★ `dust-hero-light`★ |
+| reveal-wipe | 4 | 4 | 0 | `diagonal-wipe` `mosaic-reveal` `split-reveal` `stripe-reveal` |
+| spotlight-focus | 6 | 4 | 2 | `center-stage` `deck-peel` `focus-rack`★ `focus-shift` `polaroid-develop`★ `zoom-parallax` |
+| stack-scatter | 9 | 7 | 2 | `card-fountain`★ `card-toss` `cascade-deck` `cascade-drop` `desk-photo-toss`★ `image-trail` `position-dance` `poster-burst` `stack-slide` |
+| transitions | 3 | 0 | 3 | `spin-zoom`★ `whip-pan`★ `zoom-punch`★ |
+| **合计** | **100** | **70** | **30** | |
